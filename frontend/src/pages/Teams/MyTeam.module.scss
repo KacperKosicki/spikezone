@@ -30,48 +30,6 @@
   margin-bottom: 1rem;
 }
 
-.card {
-  border-radius: 24px;
-  padding: 1.4rem;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(15, 16, 24, 0.75);
-  backdrop-filter: blur(14px);
-}
-
-.h1 { font-size: 2rem; font-weight: 1000; margin: 0 0 .7rem; }
-
-.meta { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: 1rem; }
-
-.badge {
-  font-size: 0.75rem;
-  font-weight: 1000;
-  padding: 0.25rem 0.6rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.88);
-}
-
-.note {
-  margin-bottom: 1rem;
-  padding: .9rem 1rem;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255, 80, 80, 0.10);
-  font-weight: 850;
-}
-
-.desc { white-space: pre-wrap; line-height: 1.6; color: rgba(255,255,255,0.85); font-weight: 650; }
-
-.section { margin-top: 1.2rem; }
-.section h2 { font-size: 1.1rem; font-weight: 1000; margin: 0 0 .7rem; }
-
-.teamList { list-style: none; padding: 0; margin: 0; display: grid; gap: .6rem; }
-.teamItem { padding: 0.85rem 0.9rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.10); background: rgba(8, 9, 14, 0.40); }
-.teamItem strong { font-weight: 1000; }
-
-.actions { margin-top: 1.2rem; display: flex; gap: .6rem; flex-wrap: wrap; }
-
 .btnPrimary {
   border-radius: 14px;
   padding: 0.8rem 1rem;
@@ -82,29 +40,240 @@
   background: linear-gradient(135deg, #ffffff, #f0f0f5);
 }
 
+.shell {
+  display: grid;
+  gap: 1rem;
+}
+
+/* =========================
+   COVER (BANNER) + HEADER BAR
+   ========================= */
+
+.cover {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(15, 16, 24, 0.55);
+}
+
+.coverImage,
+.coverPlaceholder {
+  height: 260px;
+  width: 100%;
+}
+
+.coverImage {
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.02);
+}
+
+.coverPlaceholder {
+  background:
+    radial-gradient(circle at 25% 30%, rgba(108,92,255,0.35), transparent 55%),
+    radial-gradient(circle at 70% 80%, rgba(255,255,255,0.10), transparent 45%),
+    linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+}
+
+.coverOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.60));
+  pointer-events: none;
+}
+
+.coverBar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 92px 1fr auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.logoWrap {
+  width: 92px;
+  height: 92px;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(10, 11, 16, 0.55);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.35);
+}
+
+.logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.logoPlaceholder {
+  font-size: 0.75rem;
+  font-weight: 1000;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.06em;
+}
+
+.headerText {
+  padding-bottom: 6px;
+  min-width: 0; /* ważne w gridzie, żeby tekst mógł się zawijać */
+}
+
+.teamName {
+  margin: 0 0 8px;
+  font-size: 1.8rem;
+  font-weight: 1000;
+  line-height: 1.1;
+  text-shadow: 0 10px 24px rgba(0,0,0,0.35);
+
+  /* bezpieczeństwo na super długie nazwy */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.badge {
+  font-size: 0.75rem;
+  font-weight: 1000;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.90);
+}
+
+.headerActions {
+  padding-bottom: 6px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .btnGhost {
   border-radius: 14px;
   padding: .8rem 1rem;
   font-weight: 1000;
   cursor: pointer;
   border: 1px solid rgba(255,255,255,0.16);
-  background: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.08);
   color: #fff;
 }
 
-/* ✅ DOPISANE */
+/* disabled */
 .btnGhost:disabled {
   opacity: 0.55;
   cursor: not-allowed;
   filter: grayscale(0.2);
 }
 
+/* =========================
+   CONTENT CARD
+   ========================= */
+
+.card {
+  border-radius: 24px;
+  padding: 1.4rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(15, 16, 24, 0.75);
+  backdrop-filter: blur(14px);
+  overflow: hidden; /* dodatkowe zabezpieczenie */
+}
+
+.note {
+  margin-bottom: 1rem;
+  padding: .9rem 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255, 80, 80, 0.10);
+  font-weight: 850;
+
+  /* żeby adminNote też nie rozwalał */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .pendingInfo {
-  margin-top: 12px;
+  margin-bottom: 1rem;
   padding: 0.9rem 1rem;
   border-radius: 16px;
   border: 1px solid rgba(255,255,255,0.12);
   background: rgba(255,255,255,0.06);
   font-weight: 900;
   color: rgba(255,255,255,0.92);
+
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.desc {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.85);
+  font-weight: 650;
+  margin: 0 0 1rem;
+
+  /* ✅ TO NAPRAWIA: długie ciągi bez spacji */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.section { margin-top: 1.2rem; }
+.section h2 { font-size: 1.1rem; font-weight: 1000; margin: 0 0 .7rem; }
+
+.teamList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: .6rem;
+}
+
+.teamItem {
+  padding: 0.85rem 0.9rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(8, 9, 14, 0.40);
+}
+
+.teamItem strong { font-weight: 1000; }
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+
+@media (max-width: 760px) {
+  .coverImage, .coverPlaceholder { height: 220px; }
+
+  .coverBar {
+    grid-template-columns: 78px 1fr;
+    grid-template-rows: auto auto;
+    align-items: end;
+  }
+
+  .logoWrap {
+    width: 78px;
+    height: 78px;
+    border-radius: 20px;
+  }
+
+  .headerActions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    padding-bottom: 0;
+  }
+
+  .teamName {
+    font-size: 1.55rem;
+  }
 }

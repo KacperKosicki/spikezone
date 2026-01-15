@@ -1,18 +1,39 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../api/api";
 import styles from "./MyTeam.module.scss";
 
+const FLASH_KEY = "teamFlash";
+
 export default function MyTeam() {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [team, setTeam] = useState(null);
   const [msg, setMsg] = useState("Ładowanie...");
+  const [flash, setFlash] = useState("");
+
+  // flash: najpierw z navigate(state), potem z sessionStorage (po hard redirect)
+  useEffect(() => {
+    if (location.state?.flash) {
+      setFlash(location.state.flash);
+      return;
+    }
+
+    try {
+      const s = sessionStorage.getItem(FLASH_KEY);
+      if (s) {
+        setFlash(s);
+        sessionStorage.removeItem(FLASH_KEY);
+      }
+    } catch {}
+  }, [location.state]);
 
   useEffect(() => {
     (async () => {
       try {
         setMsg("Ładowanie...");
-        const data = await apiFetch("/api/team/me"); // auth
+        const data = await apiFetch("/api/team/me");
         setTeam(data);
         setMsg("");
       } catch (e) {
@@ -20,6 +41,19 @@ export default function MyTeam() {
       }
     })();
   }, []);
+
+  const statusText = useMemo(() => {
+    if (!team) return "";
+    return team.status === "pending"
+      ? "ROZPATRYWANIE"
+      : team.status === "rejected"
+      ? "ODRZUCONA"
+      : "ZAAKCEPTOWANA";
+  }, [team]);
+
+  const isPending = team?.status === "pending";
+  const bannerBg = team?.bannerUrl || "";
+  const logoImg = team?.logoUrl || "";
 
   if (msg && !team) {
     return (
@@ -50,16 +84,6 @@ export default function MyTeam() {
     );
   }
 
-  const statusText =
-    team.status === "pending"
-      ? "ROZPATRYWANIE"
-      : team.status === "rejected"
-      ? "ODRZUCONA"
-      : "ZAAKCEPTOWANA";
-
-  // ✅ blokada edycji tylko dla PENDING
-  const isPending = team.status === "pending";
-
   return (
     <section className={styles.page}>
       <div className={styles.container}>
@@ -67,51 +91,85 @@ export default function MyTeam() {
           ← Wróć
         </button>
 
-        <div className={styles.card}>
-          <h1 className={styles.h1}>{team.name}</h1>
+        {/* ✅ komunikat po edycji */}
+        {flash && <div className={styles.msg}>{flash}</div>}
 
-          <div className={styles.meta}>
-            <span className={styles.badge}>{statusText}</span>
-            <span className={styles.badge}>{team.members?.length || 0} zawodników</span>
-          </div>
+        <div className={styles.shell}>
+          <div className={styles.cover}>
+            {bannerBg ? (
+              <div
+                className={styles.coverImage}
+                style={{ backgroundImage: `url("${bannerBg}")` }}
+              />
+            ) : (
+              <div className={styles.coverPlaceholder} />
+            )}
 
-          {team.adminNote && (
-            <div className={styles.note}>
-              <strong>Uwaga od admina:</strong> {team.adminNote}
+            <div className={styles.coverOverlay} />
+
+            <div className={styles.coverBar}>
+              <div className={styles.logoWrap}>
+                {logoImg ? (
+                  <img className={styles.logo} src={logoImg} alt="Logo drużyny" />
+                ) : (
+                  <div className={styles.logoPlaceholder}>LOGO</div>
+                )}
+              </div>
+
+              <div className={styles.headerText}>
+                <h1 className={styles.teamName}>{team.name}</h1>
+
+                <div className={styles.metaRow}>
+                  <span className={styles.badge}>{statusText}</span>
+                  <span className={styles.badge}>
+                    {team.members?.length || 0} zawodników
+                  </span>
+                </div>
+              </div>
+
+              <div className={styles.headerActions}>
+                <button
+                  className={styles.btnGhost}
+                  onClick={() => navigate("/team/edit")}
+                  disabled={isPending}
+                  title={
+                    isPending
+                      ? "Drużyna jest w trakcie rozpatrywania – edycja zablokowana"
+                      : "Edytuj drużynę"
+                  }
+                >
+                  {isPending ? "Edycja zablokowana" : "Edytuj drużynę"}
+                </button>
+              </div>
             </div>
-          )}
-
-          {team.description && <p className={styles.desc}>{team.description}</p>}
-
-          <div className={styles.section}>
-            <h2>Skład</h2>
-            <ul className={styles.teamList}>
-              {(team.members || []).map((m, idx) => (
-                <li key={idx} className={styles.teamItem}>
-                  <strong>{m.fullName}</strong>
-                </li>
-              ))}
-            </ul>
           </div>
 
-          <div className={styles.actions}>
-            <button
-              className={styles.btnGhost}
-              onClick={() => navigate("/team/create")}
-              disabled={isPending}
-              title={
-                isPending
-                  ? "Drużyna jest w trakcie rozpatrywania – edycja zablokowana"
-                  : "Edytuj drużynę"
-              }
-            >
-              {isPending ? "Edycja zablokowana (ROZPATRYWANIE)" : "Edytuj drużynę"}
-            </button>
+          <div className={styles.card}>
+            {team.adminNote && (
+              <div className={styles.note}>
+                <strong>Uwaga od admina:</strong> {team.adminNote}
+              </div>
+            )}
+
+            {team.description && <p className={styles.desc}>{team.description}</p>}
+
+            <div className={styles.section}>
+              <h2>Skład</h2>
+              <ul className={styles.teamList}>
+                {(team.members || []).map((m, idx) => (
+                  <li key={idx} className={styles.teamItem}>
+                    <strong>{m.fullName}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
           {isPending && (
             <div className={styles.pendingInfo}>
-              ⏳ Twoja drużyna jest w trakcie rozpatrywania. Edycja będzie dostępna po decyzji admina.
+              ⏳ Twoja drużyna jest w trakcie rozpatrywania. W tym czasie nie możesz
+              zmieniać żadnych danych (w tym logo i bannera). Edycja będzie dostępna
+              po decyzji admina.
             </div>
           )}
         </div>

@@ -10,8 +10,9 @@
 
 .container { max-width: 1100px; margin: 0 auto; }
 
+.head { margin-bottom: 1.2rem; }
 .h1 { font-size: 2rem; font-weight: 1000; margin: 0 0 .25rem; }
-.sub { opacity: .7; margin: 0 0 1.2rem; font-weight: 800; }
+.sub { opacity: .72; margin: 0; font-weight: 850; }
 
 .msg {
   padding: 0.9rem 1rem;
@@ -25,7 +26,7 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.9rem;
+  gap: 0.95rem;
 
   @media (max-width: 980px) {
     grid-template-columns: 1fr;
@@ -35,35 +36,122 @@
 .card {
   text-align: left;
   cursor: pointer;
-  border-radius: 22px;
-  padding: 1.1rem 1.1rem 1rem;
+  border-radius: 24px;
+  padding: 0;
   border: 1px solid rgba(255,255,255,0.08);
   background: rgba(15, 16, 24, 0.75);
   backdrop-filter: blur(14px);
   box-shadow: 0 24px 70px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.04);
   transition: transform .18s ease, box-shadow .18s ease;
   color: inherit;
+  overflow: hidden;
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 30px 85px rgba(0,0,0,0.62), inset 0 0 0 1px rgba(255,255,255,0.05);
   }
+
+  &:active {
+    transform: translateY(0px) scale(0.995);
+  }
 }
 
-.title { font-size: 1.05rem; font-weight: 1000; margin-bottom: 0.45rem; }
+/* ===== COVER (banner) ===== */
+.cover {
+  position: relative;
+  height: 140px;
+  width: 100%;
+  overflow: visible; /* ważne: logo może nachodzić na body */
+}
 
-.meta {
+.coverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scale(1.02);
+}
+
+.coverFallback {
+  height: 100%;
+  width: 100%;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(108,92,255,0.25), transparent 55%),
+    radial-gradient(circle at 80% 60%, rgba(143,134,255,0.18), transparent 55%),
+    linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+}
+
+.coverShade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.60));
+}
+
+/* ===== AVATAR (na dole bannera) ===== */
+.avatarWrap {
+  position: absolute;
+  left: 16px;
+  bottom: -26px; /* nachodzi na body */
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(8, 9, 14, 0.55);
+  box-shadow: 0 14px 35px rgba(0,0,0,0.55);
+  z-index: 2;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8px;
+  background: rgba(255,255,255,0.04);
+}
+
+.avatarFallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-weight: 1100;
+  font-size: 1.35rem;
+  color: rgba(255,255,255,0.92);
+  background:
+    radial-gradient(circle at 30% 30%, rgba(108,92,255,0.28), transparent 55%),
+    radial-gradient(circle at 70% 70%, rgba(143,134,255,0.22), transparent 55%),
+    rgba(255,255,255,0.03);
+}
+
+/* ===== BODY (z miejscem na avatar) ===== */
+.body {
+  padding: 44px 1.1rem 1.05rem;
+  margin-top: -1px; /* usuwa białą kreskę między bannerem a body */
+  background: rgba(15, 16, 24, 0.75); /* przykrywa łączenie (ważne przy jasnym bannerze) */
+  position: relative;
+  z-index: 1;
+}
+
+.titleRow {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-  color: rgba(255,255,255,0.68);
-  font-weight: 800;
-  margin-bottom: .6rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.title {
+  font-size: 1.05rem;
+  font-weight: 1100;
+  line-height: 1.15;
+  min-width: 0;
 }
 
 .badge {
+  flex: 0 0 auto;
   font-size: 0.75rem;
-  font-weight: 1000;
+  font-weight: 1100;
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,0.12);
@@ -71,14 +159,24 @@
   color: rgba(255,255,255,0.88);
 }
 
-.desc {
-  color: rgba(255,255,255,0.78);
-  font-weight: 750;
+.desc,
+.descMuted {
+  font-weight: 760;
   line-height: 1.45;
+  margin-bottom: 0.85rem;
 }
 
-.open {
-  margin-top: 0.85rem;
-  font-weight: 1000;
-  opacity: 0.9;
+.desc { color: rgba(255,255,255,0.78); }
+.descMuted { color: rgba(255,255,255,0.50); }
+
+/* ===== CTA ===== */
+.openRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
 }
+
+.open { font-weight: 1100; opacity: 0.92; }
+.arrow { font-weight: 1100; opacity: 0.9; }

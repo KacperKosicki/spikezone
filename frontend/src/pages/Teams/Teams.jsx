@@ -24,8 +24,10 @@ export default function Teams() {
   return (
     <section className={styles.page}>
       <div className={styles.container}>
-        <h1 className={styles.h1}>Drużyny</h1>
-        <p className={styles.sub}>Lista zaakceptowanych drużyn w SPIKEZONE.</p>
+        <div className={styles.head}>
+          <h1 className={styles.h1}>Drużyny</h1>
+          <p className={styles.sub}>Lista zaakceptowanych drużyn w SPIKEZONE.</p>
+        </div>
 
         {msg && <div className={styles.msg}>{msg}</div>}
 
@@ -36,23 +38,50 @@ export default function Teams() {
               className={styles.card}
               onClick={() => navigate(`/teams/${t.slug}`)}
               type="button"
+              aria-label={`Otwórz drużynę ${t.name}`}
             >
-              <div className={styles.title}>{t.name}</div>
+              {/* COVER */}
+              <div className={styles.cover}>
+                {t.bannerUrl ? (
+                  <img className={styles.coverImg} src={t.bannerUrl} alt="" />
+                ) : (
+                  <div className={styles.coverFallback} />
+                )}
+                <div className={styles.coverShade} />
 
-              <div className={styles.meta}>
-                <span className={styles.badge}>
-                  {t.members?.length || 0} zawodników
-                </span>
+                {/* AVATAR (na coverze) */}
+                <div className={styles.avatarWrap}>
+                  {t.logoUrl ? (
+                    <img className={styles.avatar} src={t.logoUrl} alt="" />
+                  ) : (
+                    <div className={styles.avatarFallback}>
+                      {String(t.name || "?").slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {t.description && (
-                <div className={styles.desc}>
-                  {String(t.description).slice(0, 140)}
-                  {String(t.description).length > 140 ? "..." : ""}
+              {/* CONTENT */}
+              <div className={styles.body}>
+                <div className={styles.titleRow}>
+                  <div className={styles.title}>{t.name}</div>
+                  <span className={styles.badge}>{t.members?.length || 0} zawodników</span>
                 </div>
-              )}
 
-              <div className={styles.open}>Otwórz →</div>
+                {t.description ? (
+                  <div className={styles.desc}>
+                    {String(t.description).slice(0, 140)}
+                    {String(t.description).length > 140 ? "..." : ""}
+                  </div>
+                ) : (
+                  <div className={styles.descMuted}>Brak opisu drużyny.</div>
+                )}
+
+                <div className={styles.openRow}>
+                  <span className={styles.open}>Otwórz</span>
+                  <span className={styles.arrow}>→</span>
+                </div>
+              </div>
             </button>
           ))}
         </div>

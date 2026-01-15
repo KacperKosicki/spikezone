@@ -4,6 +4,7 @@ import Footer from "./components/Footer/Footer";
 
 import Home from "./pages/Home/Home";
 import Login from "./pages/Login/Login";
+import EditTeam from "./pages/Teams/EditTeam";
 
 import Tournaments from "./pages/Tournaments/Tournaments";
 import TournamentDetails from "./pages/Tournaments/TournamentDetails";
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/backend-offline" element={<BackendOffline />} />
+        <Route path="/team/edit" element={<EditTeam />} />
 
         {/* TOURNAMENTS */}
         <Route path="/tournaments" element={<Tournaments />} />

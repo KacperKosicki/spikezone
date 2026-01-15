@@ -30,8 +30,10 @@ app.use("/api/tournaments", require("./routes/tournaments.public.routes"));
 // PUBLIC: teams (lista + szczegóły po slugu)
 app.use("/api/teams", require("./routes/teams.routes"));
 
-// USER TEAM (create + my team)
-app.use("/api/team", require("./routes/team.create.routes")); // POST /api/team, PATCH /api/team/me
-app.use("/api/team", require("./routes/team.me.routes"));     // GET /api/team/me
+// USER TEAM
+app.use("/api/team", require("./routes/team.me.routes"));     // GET/PATCH /api/team/me
+app.use("/api/team", require("./routes/team.create.routes")); // POST /api/team
+
+app.use("/api/team/upload", require("./routes/team.upload.routes"));
 
 module.exports = app;
