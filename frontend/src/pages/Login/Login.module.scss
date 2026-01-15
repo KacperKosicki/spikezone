@@ -1,0 +1,72 @@
+.loginPage {
+  min-height: calc(100vh - 80px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(108,92,255,0.15), transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(143,134,255,0.12), transparent 40%),
+    linear-gradient(180deg, #0b0c12, #0e0f16);
+  padding: 2rem;
+}
+
+.card {
+  width: 100%;
+  max-width: 460px;
+  background: rgba(15, 16, 24, 0.75);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  padding: 3rem 2.4rem;
+  text-align: center;
+  backdrop-filter: blur(14px);
+  box-shadow:
+    0 30px 80px rgba(0,0,0,0.55),
+    inset 0 0 0 1px rgba(255,255,255,0.04);
+
+  h1 {
+    font-size: 1.8rem;
+    font-weight: 900;
+    margin-bottom: 0.5rem;
+  }
+}
+
+.subtitle {
+  color: rgba(255,255,255,0.65);
+  font-size: 0.95rem;
+  margin-bottom: 2.2rem;
+}
+
+.googleBtn {
+  width: 100%;
+  border: none;
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  font-weight: 900;
+  cursor: pointer;
+  color: #0e0f16;
+  background: linear-gradient(135deg, #ffffff, #f0f0f5);
+  transition: 0.2s ease;
+  box-shadow: 0 14px 35px rgba(0,0,0,0.4);
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 45px rgba(0,0,0,0.55);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.message {
+  margin-top: 1.6rem;
+  font-weight: 800;
+  color: #7cff9b;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

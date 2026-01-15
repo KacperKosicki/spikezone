@@ -1,0 +1,23 @@
+# dependencies
+/node_modules
+
+# env
+.env
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+logs
+*.log
+
+# coverage
+coverage
+
+# build (jeśli kiedyś zrobisz build)
+dist
+build
+
+# OS
+.DS_Store
+Thumbs.db

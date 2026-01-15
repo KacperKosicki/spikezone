@@ -1,0 +1,55 @@
+.page {
+  min-height: calc(100vh - 80px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: radial-gradient(circle at 20% 20%, rgba(108, 92, 255, 0.14), transparent 45%),
+              radial-gradient(circle at 80% 80%, rgba(143, 134, 255, 0.10), transparent 45%),
+              linear-gradient(180deg, #0b0c12, #0a0b10);
+  color: #fff;
+}
+
+.box {
+  width: min(560px, 100%);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 18px;
+  padding: 1.6rem 1.4rem;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+
+  h1 {
+    margin: 0 0 0.6rem 0;
+    font-size: 1.6rem;
+    font-weight: 900;
+  }
+
+  p {
+    margin: 0 0 1.1rem 0;
+    opacity: 0.85;
+    line-height: 1.5;
+  }
+}
+
+.btn {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  transition: 0.2s ease;
+
+  &:hover {
+    background: rgba(108, 92, 255, 0.14);
+    border-color: rgba(108, 92, 255, 0.30);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
