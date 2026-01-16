@@ -151,6 +151,26 @@
   font-weight: 800;
 }
 
+/* ✅ TEAM chip – 2 linie */
+.teamChipCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  line-height: 1.05;
+}
+
+.teamLine1 {
+  font-weight: 900;
+  font-size: 0.9rem;
+}
+
+.teamLine2 {
+  font-weight: 1000;
+  font-size: 0.95rem;
+  letter-spacing: 0.2px;
+}
+
 /* pending = złoto */
 .team_pending {
   color: #f5c542;

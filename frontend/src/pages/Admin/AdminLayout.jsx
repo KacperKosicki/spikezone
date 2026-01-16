@@ -19,7 +19,6 @@ export default function AdminLayout() {
             Turnieje
           </NavLink>
 
-          {/* ✅ NOWE */}
           <NavLink
             to="/admin/teams"
             className={({ isActive }) => (isActive ? styles.active : "")}

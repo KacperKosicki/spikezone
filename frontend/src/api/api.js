@@ -8,6 +8,18 @@ export async function getAuthHeader() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function makeApiError(res, data, fallbackMsg) {
+  const err = new Error(data?.message || fallbackMsg);
+
+  // ✅ mapowanie kodu
+  err.code = data?.code;
+  if (!err.code && res.status === 401) err.code = "UNAUTHORIZED";
+
+  err.status = res.status;
+  err.data = data;
+  return err;
+}
+
 export async function apiFetch(path, { method = "GET", body } = {}) {
   const authHeader = await getAuthHeader();
 
@@ -21,11 +33,10 @@ export async function apiFetch(path, { method = "GET", body } = {}) {
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.message || "Request failed");
+  if (!res.ok) throw makeApiError(res, data, "Request failed");
   return data;
 }
 
-// ✅ multipart upload (FormData)
 export async function apiUpload(path, formData, { method = "POST" } = {}) {
   const authHeader = await getAuthHeader();
 
@@ -33,12 +44,11 @@ export async function apiUpload(path, formData, { method = "POST" } = {}) {
     method,
     headers: {
       ...authHeader,
-      // UWAGA: NIE ustawiamy Content-Type przy FormData (browser zrobi boundary)
     },
     body: formData,
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.message || "Upload failed");
+  if (!res.ok) throw makeApiError(res, data, "Upload failed");
   return data;
 }

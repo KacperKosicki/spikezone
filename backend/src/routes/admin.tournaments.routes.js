@@ -5,6 +5,7 @@ const auth = require("../middleware/auth");
 const requireAdmin = require("../middleware/requireAdmin");
 
 const Tournament = require("../models/Tournament");
+const TournamentRegistration = require("../models/TournamentRegistration"); // ✅ DODAJ
 const toSlug = require("../utils/toSlug");
 
 // helper: unikalny slug bez while (1-2 zapytania)
@@ -85,16 +86,13 @@ router.patch("/:id", auth, requireAdmin, async (req, res) => {
   try {
     const payload = { ...req.body, updatedByUid: req.user.uid };
 
-    // jeśli zmieniasz title/slug — dopilnuj sluga
     if (payload.slug) payload.slug = toSlug(payload.slug);
     if (!payload.slug && payload.title) payload.slug = toSlug(payload.title);
 
-    // status walidacja
     if (payload.status && !["draft", "published", "archived"].includes(payload.status)) {
       return res.status(400).json({ message: "Niepoprawny status" });
     }
 
-    // jeśli slug po zmianie koliduje z innym turniejem
     if (payload.slug) {
       const clash = await Tournament.findOne({
         slug: payload.slug,
@@ -123,11 +121,20 @@ router.patch("/:id", auth, requireAdmin, async (req, res) => {
   }
 });
 
-// ✅ DELETE
+// ✅ DELETE + CASCADE
 router.delete("/:id", auth, requireAdmin, async (req, res) => {
-  const deleted = await Tournament.findByIdAndDelete(req.params.id);
-  if (!deleted) return res.status(404).json({ message: "Nie znaleziono turnieju" });
-  res.json({ ok: true });
+  try {
+    const deleted = await Tournament.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: "Nie znaleziono turnieju" });
+
+    // ✅ usuń WSZYSTKIE zgłoszenia dla tego turnieju
+    await TournamentRegistration.deleteMany({ tournamentId: deleted._id });
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error("admin.tournaments DELETE:", e);
+    return res.status(500).json({ message: "Błąd serwera" });
+  }
 });
 
 module.exports = router;

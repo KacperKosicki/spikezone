@@ -36,4 +36,6 @@ app.use("/api/team", require("./routes/team.create.routes")); // POST /api/team
 
 app.use("/api/team/upload", require("./routes/team.upload.routes"));
 
+app.use("/api/tournaments", require("./routes/tournaments.register.routes"));
+
 module.exports = app;

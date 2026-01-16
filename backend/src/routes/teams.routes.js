@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
 
+const auth = require("../middleware/auth"); // ✅ DODANE
 const Team = require("../models/Team");
+const TournamentRegistration = require("../models/TournamentRegistration"); // ✅ DODANE
 
 /* =========================
    ✅ CHECK NAME (PUBLIC)
@@ -40,6 +42,34 @@ router.get("/", async (req, res) => {
     return res.json(teams || []);
   } catch (e) {
     console.error("TEAMS.list:", e);
+    return res.status(500).json({ message: "Błąd serwera" });
+  }
+});
+
+/* =========================
+   ✅ DELETE MY TEAM (AUTH)
+   DELETE /api/teams/me
+   → usuwa drużynę + wszystkie jej zgłoszenia do turniejów
+========================= */
+router.delete("/me", auth, async (req, res) => {
+  try {
+    const uid = req.user.uid;
+
+    const team = await Team.findOne({ ownerUid: uid });
+    if (!team) return res.status(404).json({ message: "Brak drużyny" });
+
+    // ✅ CASCADE DELETE – usuń zgłoszenia turniejowe tej drużyny
+    await TournamentRegistration.deleteMany({ teamId: team._id });
+
+    // ✅ usuń drużynę
+    await Team.deleteOne({ _id: team._id });
+
+    return res.json({
+      ok: true,
+      message: "✅ Drużyna usunięta wraz ze zgłoszeniami do turniejów.",
+    });
+  } catch (e) {
+    console.error("TEAM.delete:", e);
     return res.status(500).json({ message: "Błąd serwera" });
   }
 });
