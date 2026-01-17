@@ -403,6 +403,173 @@
   }
 }
 
+/* ✅ AdminTeams – richer rows */
+
+.thead,
+.trow {
+  grid-template-columns: 2.2fr 0.9fr 1.1fr 2.1fr 2.0fr 1.2fr;
+}
+
+.titleRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.metaBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.miniBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 0.78rem;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  opacity: 0.92;
+}
+
+.membersCol {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.membersCount {
+  font-weight: 1000;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.membersList {
+  margin: 0;
+  padding-left: 1.05rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  opacity: 0.92;
+
+  li {
+    font-weight: 800;
+    font-size: 0.92rem;
+    line-height: 1.25;
+  }
+}
+
+.membersMore {
+  opacity: 0.75;
+  font-weight: 900 !important;
+}
+
+.mediaCol {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.thumbGroup {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 0.55rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.thumb,
+.thumbWide {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.25);
+}
+
+.thumb {
+  width: 44px;
+  height: 44px;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.thumbWide {
+  height: 44px;
+  min-width: 0;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.thumbPh {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-weight: 1000;
+  font-size: 0.72rem;
+  opacity: 0.75;
+  letter-spacing: 0.5px;
+}
+
+.descPreview {
+  font-size: 0.92rem;
+  line-height: 1.35;
+  opacity: 0.9;
+  word-break: break-word;
+}
+
+.noteHint {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  opacity: 0.65;
+  font-weight: 900;
+}
+
+/* Mobile: nadal robi karty — dopasuj żeby nie było ścisku */
+@media (max-width: 900px) {
+  .thead {
+    display: none;
+  }
+
+  .trow {
+    grid-template-columns: 1fr;
+  }
+
+  .thumbGroup {
+    grid-template-columns: 56px 1fr;
+  }
+
+  .thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+  }
+
+  .thumbWide {
+    height: 56px;
+    border-radius: 14px;
+  }
+
+  .membersCount {
+    font-size: 1.2rem;
+  }
+}
+
 @media (max-width: 520px) {
   .page {
     padding: 0 0.45rem;

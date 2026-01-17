@@ -226,17 +226,17 @@ export default function Tournaments() {
                 {/* mini-stats */}
                 <div className={styles.statsRow}>
                   <span className={styles.statPill}>
-                    <FaUsers /> Limit: {t.teamLimit ?? 16}
+                    <FaUsers /> Limit drużyn: {t.teamLimit ?? 16}
                   </span>
 
                   <span className={styles.statPill}>
-                    <FaRegMoneyBillAlt /> Wpisowe: {t.entryFee ?? 0} zł
+                    <FaRegMoneyBillAlt /> Wpisowe od drużyny: {t.entryFee ?? 0} zł
                   </span>
                 </div>
 
                 <div className={styles.footer}>
                   <span className={styles.open}>
-                    Zobacz szczegóły <FaArrowRight />
+                    Zobacz szczegóły turnieju <FaArrowRight />
                   </span>
                 </div>
               </button>
