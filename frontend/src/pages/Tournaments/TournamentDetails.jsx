@@ -1,5 +1,5 @@
 // TournamentDetails.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import styles from "./TournamentDetails.module.scss";
 import {
@@ -10,6 +10,7 @@ import {
   FaUsers,
   FaTrophy,
   FaMapPin,
+  FaClock,
 } from "react-icons/fa";
 
 import { apiFetch } from "../../api/api";
@@ -22,6 +23,9 @@ const FLASH_KEY = "teamFlash";
 export default function TournamentDetails() {
   const { slug } = useParams();
   const navigate = useNavigate();
+
+  const redirectTimeoutRef = useRef(null);
+  const countdownIntervalRef = useRef(null);
 
   const [t, setT] = useState(null);
   const [err, setErr] = useState("");
@@ -47,37 +51,49 @@ export default function TournamentDetails() {
   // odliczanie w modalu
   const [countdown, setCountdown] = useState(0);
 
+  const cancelRedirect = () => {
+    if (redirectTimeoutRef.current) {
+      window.clearTimeout(redirectTimeoutRef.current);
+      redirectTimeoutRef.current = null;
+    }
+    if (countdownIntervalRef.current) {
+      window.clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+  };
+
   function openRedirectModal({ title, text, to, seconds = 10 }) {
+    // ✅ zawsze ubij poprzednie timery
+    cancelRedirect();
+
     setModal({ open: true, title, text, to, seconds });
     setCountdown(seconds);
 
-    window.clearTimeout(openRedirectModal._t);
-    window.clearInterval(openRedirectModal._i);
-
-    openRedirectModal._i = window.setInterval(() => {
+    countdownIntervalRef.current = window.setInterval(() => {
       setCountdown((s) => {
         if (s <= 1) {
-          window.clearInterval(openRedirectModal._i);
+          // kończymy odliczanie, ale timeout i tak zrobi nawigację
+          window.clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
           return 0;
         }
         return s - 1;
       });
     }, 1000);
 
-    openRedirectModal._t = window.setTimeout(() => {
-      window.clearInterval(openRedirectModal._i);
+    redirectTimeoutRef.current = window.setTimeout(() => {
+      // ✅ domknij timery i dopiero nawiguj
+      cancelRedirect();
       setModal((m) => ({ ...m, open: false }));
       navigate(to, { state: { flash: text } });
     }, seconds * 1000);
   }
 
-  // cleanup przy unmount
   useEffect(() => {
-    return () => {
-      window.clearTimeout(openRedirectModal._t);
-      window.clearInterval(openRedirectModal._i);
-    };
+    return () => cancelRedirect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   async function fetchRegistrations(currentSlug) {
     try {
@@ -110,16 +126,133 @@ export default function TournamentDetails() {
     })();
   }, [slug]);
 
-  const dateText = useMemo(() => {
-    if (!t?.startDate || !t?.endDate) return "—";
-    return `${new Date(t.startDate).toLocaleDateString("pl-PL")} – ${new Date(
-      t.endDate
-    ).toLocaleDateString("pl-PL")}`;
-  }, [t?.startDate, t?.endDate]);
+  const prettyDateTime = (d) => {
+    try {
+      if (!d) return "—";
+      const dt = new Date(d);
+      if (Number.isNaN(dt.getTime())) return "—";
+      return dt.toLocaleString("pl-PL", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "—";
+    }
+  };
+
+  const diffHuman = (futureOrPastDate) => {
+    // zwraca np: { days: 2, hours: 5, minutes: 10, isPast: false }
+    try {
+      const now = new Date();
+      const target = new Date(futureOrPastDate);
+      if (Number.isNaN(target.getTime())) return null;
+
+      const ms = target.getTime() - now.getTime();
+      const isPast = ms < 0;
+      const abs = Math.abs(ms);
+
+      const minutes = Math.floor(abs / (1000 * 60));
+      const hours = Math.floor(abs / (1000 * 60 * 60));
+      const days = Math.floor(abs / (1000 * 60 * 60 * 24));
+
+      const remHours = hours - days * 24;
+      const remMinutes = minutes - hours * 60;
+
+      return { days, hours: remHours, minutes: remMinutes, isPast };
+    } catch {
+      return null;
+    }
+  };
+
+  const dateRangeEvent = useMemo(() => {
+    // jeśli masz eventEndAt -> pokazz zakres, jeśli nie -> tylko start
+    const s = t?.eventStartAt ? new Date(t.eventStartAt) : null;
+    const e = t?.eventEndAt ? new Date(t.eventEndAt) : null;
+
+    const hasS = s && !Number.isNaN(s.getTime());
+    const hasE = e && !Number.isNaN(e.getTime());
+
+    if (!hasS && !hasE) return "—";
+    if (hasS && !hasE) return prettyDateTime(s);
+    return `${prettyDateTime(s)} – ${prettyDateTime(e)}`;
+  }, [t?.eventStartAt, t?.eventEndAt]);
 
   const registeredCount = regs?.stats?.count ?? 0;
   const registeredLimit = regs?.stats?.limit ?? (t?.teamLimit ?? 16);
   const isFull = registeredCount >= registeredLimit;
+
+  // status turnieju (na podstawie eventStartAt / eventEndAt)
+  const tournamentStatus = useMemo(() => {
+    const now = new Date();
+    const s = t?.eventStartAt ? new Date(t.eventStartAt) : null;
+    const e = t?.eventEndAt ? new Date(t.eventEndAt) : null;
+
+    const hasS = s && !Number.isNaN(s.getTime());
+    const hasE = e && !Number.isNaN(e.getTime());
+
+    if (hasE && now > e) return { text: "Zakończony", tone: "done" };
+    if (hasS && now >= s && (!hasE || now <= e)) return { text: "Trwa", tone: "live" };
+    if (hasS) {
+      const d = diffHuman(s);
+      if (d && !d.isPast && d.days <= 7) return { text: "Już wkrótce", tone: "soon" };
+      return { text: "Nadchodzący", tone: "upcoming" };
+    }
+    return { text: "Turniej", tone: "neutral" };
+  }, [t?.eventStartAt, t?.eventEndAt]);
+
+  // status zapisów + “inteligentny” opis
+  const regInfo = useMemo(() => {
+    const now = new Date();
+
+    const start = t?.regStartAt ? new Date(t.regStartAt) : null;
+    const end = t?.regEndAt ? new Date(t.regEndAt) : null;
+
+    const hasStart = start && !Number.isNaN(start.getTime());
+    const hasEnd = end && !Number.isNaN(end.getTime());
+
+    const notStarted = hasStart && now < start;
+    const closed = hasEnd && now > end;
+    const open = (!hasStart || now >= start) && (!hasEnd || now <= end);
+
+    const rangeText =
+      hasStart || hasEnd
+        ? `${hasStart ? prettyDateTime(start) : "—"} → ${hasEnd ? prettyDateTime(end) : "—"}`
+        : "Brak ustawionych dat zapisów";
+
+    let badge = { text: "Zapisy: otwarte", tone: "open" };
+    if (notStarted) badge = { text: "Zapisy: jeszcze nie", tone: "soon" };
+    if (closed) badge = { text: "Zapisy: zamknięte", tone: "closed" };
+    if (!hasStart && !hasEnd) badge = { text: "Zapisy: brak dat", tone: "neutral" };
+
+    let smart = "";
+    if (notStarted && hasStart) {
+      const d = diffHuman(start);
+      if (d) smart = `Start zapisów za ${d.days}d ${d.hours}h`;
+    } else if (open && hasEnd) {
+      const d = diffHuman(end);
+      if (d) smart = `Koniec zapisów za ${d.days}d ${d.hours}h`;
+    } else if (closed && hasEnd) {
+      const d = diffHuman(end);
+      if (d) smart = `Zamknięto ${d.days}d ${d.hours}h temu`;
+    } else if (!hasStart && !hasEnd) {
+      smart = "Ustaw daty zapisów w panelu admina";
+    }
+
+    return {
+      start: hasStart ? start : null,
+      end: hasEnd ? end : null,
+      open,
+      notStarted,
+      closed,
+      rangeText,
+      badge,
+      smart,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t?.regStartAt, t?.regEndAt]);
 
   async function handleRegister() {
     setActionMsg("");
@@ -132,6 +265,20 @@ export default function TournamentDetails() {
         to: "/login",
         seconds: 10,
       });
+      return;
+    }
+
+    // front guard: jak zapisy nieaktywne, nie strzelamy requestem
+    if (!regInfo.open) {
+      if (regInfo.notStarted) {
+        setActionErr("Zapisy jeszcze się nie rozpoczęły.");
+        return;
+      }
+      if (regInfo.closed) {
+        setActionErr("Zapisy zostały zakończone — nie można już dołączyć.");
+        return;
+      }
+      setActionErr("Zapisy są aktualnie niedostępne.");
       return;
     }
 
@@ -189,6 +336,15 @@ export default function TournamentDetails() {
         return;
       }
 
+      if (code === "REGISTRATION_NOT_STARTED") {
+        setActionErr("Zapisy jeszcze się nie rozpoczęły.");
+        return;
+      }
+      if (code === "REGISTRATION_CLOSED") {
+        setActionErr("Zapisy zostały zakończone — nie można już dołączyć.");
+        return;
+      }
+
       setActionErr(e?.message || "Nie udało się zgłosić drużyny.");
     } finally {
       setActionLoading(false);
@@ -206,15 +362,22 @@ export default function TournamentDetails() {
         sessionStorage.removeItem(INTENT_KEY);
         handleRegister();
       }
-    } catch {}
+    } catch { }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
   const showNotApprovedActions =
     actionErr && actionErr.toLowerCase().includes("nie jest zaakceptowana");
 
+  const metaText = useMemo(() => {
+    const city = t?.city || "—";
+    const venue = t?.venue ? ` • ${t.venue}` : "";
+    return `${city}${venue}`;
+  }, [t?.city, t?.venue]);
+
   return (
     <section className={styles.section}>
+      <div className={styles.bgGlow} aria-hidden="true" />
       <div className={styles.container}>
         <button className={styles.backModern} onClick={() => navigate("/tournaments")} type="button">
           <FaArrowLeft /> Wróć do listy
@@ -235,9 +398,7 @@ export default function TournamentDetails() {
                   className={styles.btnPrimary}
                   type="button"
                   onClick={() => {
-                    window.clearTimeout(openRedirectModal._t);
-                    window.clearInterval(openRedirectModal._i);
-
+                    cancelRedirect();
                     setModal((m) => ({ ...m, open: false }));
                     navigate(modal.to, { state: { flash: modal.text } });
                   }}
@@ -245,19 +406,19 @@ export default function TournamentDetails() {
                   Przejdź teraz
                 </button>
 
+
                 <button
                   className={styles.btnGhost}
                   type="button"
                   onClick={() => {
-                    window.clearTimeout(openRedirectModal._t);
-                    window.clearInterval(openRedirectModal._i);
-
+                    cancelRedirect();
                     setModal((m) => ({ ...m, open: false }));
                     setCountdown(0);
                   }}
                 >
                   Zamknij
                 </button>
+
               </div>
 
               {!!modal.seconds && <div className={styles.modalHint}>Przekierowanie za {countdown}s…</div>}
@@ -267,29 +428,59 @@ export default function TournamentDetails() {
 
         {!loading && t && (
           <div className={styles.detailsCard}>
-            {/* TOP */}
-            <div className={styles.detailsTop}>
-              <div className={styles.detailsIcon}>
-                <FaTrophy />
-              </div>
+            {/* HERO / HEADER */}
+            <div className={styles.hero}>
+              {t.bannerUrl ? (
+                <div className={styles.heroBg} style={{ backgroundImage: `url("${t.bannerUrl}")` }} aria-hidden="true" />
+              ) : (
+                <div className={styles.heroBgFallback} aria-hidden="true" />
+              )}
+              <div className={styles.heroOverlay} aria-hidden="true" />
 
-              <div className={styles.detailsHead}>
-                <h1 className={styles.detailsTitle}>{t.title}</h1>
+              <div className={styles.heroInner}>
+                <div className={styles.heroIcon}>
+                  <FaTrophy />
+                </div>
 
-                <div className={styles.detailsMetaRow}>
-                  <span className={styles.pillSoft}>
-                    <FaCalendarAlt /> {dateText}
-                  </span>
+                <div className={styles.heroHead}>
+                  <h1 className={styles.detailsTitle}>{t.title}</h1>
 
-                  <span className={styles.pillSoft}>
-                    <FaMapMarkerAlt /> {t.city || "—"}
-                  </span>
-
-                  {!!t.venue && (
+                  <div className={styles.detailsMetaRow} title={metaText}>
+                    {/* Termin turnieju */}
                     <span className={styles.pillSoft}>
-                      <FaMapPin /> {t.venue}
+                      <FaCalendarAlt /> {dateRangeEvent}
                     </span>
-                  )}
+
+                    {/* Status turnieju */}
+                    <span className={`${styles.statusPill} ${styles[`status_${tournamentStatus.tone}`]}`}>
+                      <span className={styles.dot} aria-hidden="true" />
+                      {tournamentStatus.text}
+                    </span>
+
+                    {/* Zapisy: status */}
+                    <span className={`${styles.regPill} ${styles[`reg_${regInfo.badge.tone}`]}`}>
+                      <FaClock />
+                      {regInfo.badge.text}
+                    </span>
+
+                    {/* Zapisy: zakres */}
+                    <span className={styles.pillSoft}>
+                      <FaClock /> {regInfo.rangeText}
+                    </span>
+
+                    {/* Lokalizacja */}
+                    <span className={styles.pillSoft}>
+                      <FaMapMarkerAlt /> {t.city || "—"}
+                    </span>
+
+                    {!!t.venue && (
+                      <span className={styles.pillSoft}>
+                        <FaMapPin /> {t.venue}
+                      </span>
+                    )}
+                  </div>
+
+                  {!!regInfo.smart && <div className={styles.heroHint}>{regInfo.smart}</div>}
                 </div>
               </div>
             </div>
@@ -320,6 +511,58 @@ export default function TournamentDetails() {
               </div>
             </div>
 
+            {/* HARMONOGRAM */}
+            <div className={styles.block}>
+              <div className={styles.blockHead}>
+                <h2>Harmonogram</h2>
+                <span className={styles.blockBadge}>Terminy</span>
+              </div>
+
+              <div className={styles.scheduleGrid}>
+                <div className={styles.scheduleCard}>
+                  <div className={styles.scheduleTop}>
+                    <span className={styles.scheduleLabel}>Start zapisów</span>
+                    <span className={styles.scheduleTone}>
+                      <FaClock /> {t?.regStartAt ? prettyDateTime(t.regStartAt) : "—"}
+                    </span>
+                  </div>
+                  <div className={styles.scheduleHint}>Od tego momentu można wysyłać zgłoszenia.</div>
+                </div>
+
+                <div className={styles.scheduleCard}>
+                  <div className={styles.scheduleTop}>
+                    <span className={styles.scheduleLabel}>Koniec zapisów</span>
+                    <span className={styles.scheduleTone}>
+                      <FaClock /> {t?.regEndAt ? prettyDateTime(t.regEndAt) : "—"}
+                    </span>
+                  </div>
+                  <div className={styles.scheduleHint}>Po tym terminie zgłoszenia są zamknięte.</div>
+                </div>
+
+                <div className={styles.scheduleCard}>
+                  <div className={styles.scheduleTop}>
+                    <span className={styles.scheduleLabel}>Start turnieju</span>
+                    <span className={styles.scheduleTone}>
+                      <FaCalendarAlt /> {t?.eventStartAt ? prettyDateTime(t.eventStartAt) : "—"}
+                    </span>
+                  </div>
+                  <div className={styles.scheduleHint}>Początek rywalizacji (data i godzina).</div>
+                </div>
+
+                {t?.eventEndAt ? (
+                  <div className={styles.scheduleCard}>
+                    <div className={styles.scheduleTop}>
+                      <span className={styles.scheduleLabel}>Koniec turnieju</span>
+                      <span className={styles.scheduleTone}>
+                        <FaCalendarAlt /> {prettyDateTime(t.eventEndAt)}
+                      </span>
+                    </div>
+                    <div className={styles.scheduleHint}>Zakończenie wydarzenia (data i godzina).</div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
             {/* REGISTER BLOCK */}
             <div className={styles.block}>
               <div className={styles.blockHead}>
@@ -334,23 +577,65 @@ export default function TournamentDetails() {
               )}
 
               {actionErr && (
-                <div className={`${styles.msgInline} ${styles.err}`}>
+                <div className={`${styles.msgInline} ${styles.errInline}`}>
                   ❌ {String(actionErr).replace(/^(\s*❌\s*)+/, "")}
                 </div>
               )}
 
-              <button
-                className={styles.btnPrimary}
-                onClick={handleRegister}
-                disabled={actionLoading || isFull}
-                type="button"
-                title={isFull ? "Limit osiągnięty" : "Zgłoś swoją drużynę"}
-              >
-                {isFull ? "Limit osiągnięty" : actionLoading ? "Zapisywanie..." : "Zgłoś drużynę"}
-              </button>
+              {!regInfo.open && (
+                <div className={`${styles.msgInline} ${styles.warnInline}`}>
+                  <span className={styles.warnIcon} aria-hidden="true">⏳</span>
+                  {regInfo.notStarted
+                    ? "Zapisy jeszcze się nie rozpoczęły."
+                    : regInfo.closed
+                      ? "Zapisy zostały zakończone."
+                      : "Zapisy są aktualnie niedostępne."}
+                  {!!regInfo.smart && <span className={styles.warnSmall}> • {regInfo.smart}</span>}
+                </div>
+              )}
+
+              <div className={styles.registerRow}>
+                <button
+                  className={styles.btnPrimary}
+                  onClick={handleRegister}
+                  disabled={actionLoading || isFull || !regInfo.open}
+                  type="button"
+                  title={
+                    isFull
+                      ? "Limit osiągnięty"
+                      : !regInfo.open
+                        ? regInfo.notStarted
+                          ? "Zapisy jeszcze się nie rozpoczęły"
+                          : "Zapisy są zamknięte"
+                        : "Zgłoś swoją drużynę"
+                  }
+                >
+                  {isFull
+                    ? "Limit osiągnięty"
+                    : actionLoading
+                      ? "Zapisywanie..."
+                      : !regInfo.open
+                        ? regInfo.notStarted
+                          ? "Zapisy jeszcze nie wystartowały"
+                          : "Zapisy zamknięte"
+                        : "Zgłoś drużynę"}
+                </button>
+
+                <div className={styles.registerHint}>
+                  {isFull ? (
+                    <span className={styles.hintText}>Turniej jest pełny — limit osiągnięty.</span>
+                  ) : !regInfo.open ? (
+                    <span className={styles.hintText}>
+                      {regInfo.notStarted ? "Poczekaj na start zapisów." : "Zapisy są zamknięte."}
+                    </span>
+                  ) : (
+                    <span className={styles.hintText}>Kliknij, aby wysłać zgłoszenie swojej drużyny do turnieju.</span>
+                  )}
+                </div>
+              </div>
 
               {showNotApprovedActions && (
-                <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <div className={styles.inlineActions}>
                   <button className={styles.btnGhost} type="button" onClick={() => navigate("/team/me")}>
                     Moja drużyna
                   </button>

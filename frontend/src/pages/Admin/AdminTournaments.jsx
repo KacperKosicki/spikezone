@@ -8,19 +8,62 @@ const emptyForm = {
   status: "draft",
   city: "",
   venue: "",
-  startDate: "",
-  endDate: "",
+
+  // ✅ NOWE POLA
+  regStartAt: "",
+  regEndAt: "",
+  eventStartAt: "",
+  eventEndAt: "",
+
   description: "",
   teamLimit: 16,
   entryFee: 0,
 };
 
-const formatDateInput = (d) => {
+// datetime-local wants: "YYYY-MM-DDTHH:mm"
+const formatDateTimeInput = (d) => {
   if (!d) return "";
   const date = new Date(d);
   if (Number.isNaN(date.getTime())) return "";
-  // yyyy-mm-dd
-  return date.toISOString().slice(0, 10);
+
+  const pad = (n) => String(n).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  const mm = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const mi = pad(date.getMinutes());
+
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+};
+
+// do listy / meta (czytelnie)
+const formatPL = (d) => {
+  if (!d) return "—";
+  const date = new Date(d);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("pl-PL", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+// status zapisów (admin podgląd)
+const regStatusFor = (t) => {
+  const now = new Date();
+
+  const rs = t?.regStartAt ? new Date(t.regStartAt) : null;
+  const re = t?.regEndAt ? new Date(t.regEndAt) : null;
+
+  const rsOk = rs && !Number.isNaN(rs.getTime());
+  const reOk = re && !Number.isNaN(re.getTime());
+
+  if (reOk && now > re) return { text: "Zapisy zakończone", tone: "done" };
+  if (rsOk && now < rs) return { text: "Zapisy nieaktywne", tone: "upcoming" };
+  if (rsOk && (!reOk || now <= re)) return { text: "Zapisy trwają", tone: "live" };
+  return { text: "Brak okna zapisów", tone: "neutral" };
 };
 
 export default function AdminTournaments() {
@@ -35,7 +78,7 @@ export default function AdminTournaments() {
   const [editingId, setEditingId] = useState(null); // null => create
   const isEditing = !!editingId;
 
-  // simple filter/search
+  // filter/search
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -86,8 +129,13 @@ export default function AdminTournaments() {
       status: t.status || "draft",
       city: t.city || "",
       venue: t.venue || "",
-      startDate: formatDateInput(t.startDate),
-      endDate: formatDateInput(t.endDate),
+
+      // ✅ NOWE POLA
+      regStartAt: formatDateTimeInput(t.regStartAt),
+      regEndAt: formatDateTimeInput(t.regEndAt),
+      eventStartAt: formatDateTimeInput(t.eventStartAt),
+      eventEndAt: formatDateTimeInput(t.eventEndAt),
+
       description: t.description || "",
       teamLimit: Number(t.teamLimit ?? 16),
       entryFee: Number(t.entryFee ?? 0),
@@ -98,9 +146,29 @@ export default function AdminTournaments() {
 
   const validate = () => {
     if (!form.title.trim()) return "Brak tytułu";
-    if (!form.startDate) return "Brak daty startu";
-    if (!form.endDate) return "Brak daty końca";
-    if (new Date(form.endDate) < new Date(form.startDate)) return "endDate nie może być wcześniej niż startDate";
+    if (!form.regStartAt) return "Brak daty startu zapisów";
+    if (!form.regEndAt) return "Brak daty końca zapisów";
+    if (!form.eventStartAt) return "Brak daty rozpoczęcia turnieju";
+
+    const rs = new Date(form.regStartAt);
+    const re = new Date(form.regEndAt);
+    const es = new Date(form.eventStartAt);
+    const ee = form.eventEndAt ? new Date(form.eventEndAt) : null;
+
+    if (Number.isNaN(rs.getTime())) return "Niepoprawna data startu zapisów";
+    if (Number.isNaN(re.getTime())) return "Niepoprawna data końca zapisów";
+    if (Number.isNaN(es.getTime())) return "Niepoprawna data rozpoczęcia turnieju";
+    if (ee && Number.isNaN(ee.getTime())) return "Niepoprawna data zakończenia turnieju";
+
+    if (re < rs) return "Koniec zapisów nie może być przed startem zapisów";
+    if (es < rs) return "Turniej nie może zaczynać się przed startem zapisów";
+    if (es < re) {
+      // to możesz poluzować, ale logicznie lepiej tak:
+      // zapisy kończą się przed rozpoczęciem turnieju
+      return "Koniec zapisów powinien być przed rozpoczęciem turnieju";
+    }
+    if (ee && ee < es) return "Zakończenie turnieju nie może być przed startem turnieju";
+
     return "";
   };
 
@@ -115,13 +183,22 @@ export default function AdminTournaments() {
       return;
     }
 
+    // ✅ payload: wysyłamy pola dokładnie jak w modelu
     const payload = {
-      ...form,
+      title: form.title,
+      slug: form.slug,
+      status: form.status,
+      city: form.city,
+      venue: form.venue,
+
+      regStartAt: form.regStartAt,
+      regEndAt: form.regEndAt,
+      eventStartAt: form.eventStartAt,
+      eventEndAt: form.eventEndAt || "",
+
+      description: form.description,
       teamLimit: Number(form.teamLimit ?? 16),
       entryFee: Number(form.entryFee ?? 0),
-      // backend przyjmie ISO / Date string
-      startDate: form.startDate,
-      endDate: form.endDate,
     };
 
     try {
@@ -172,9 +249,7 @@ export default function AdminTournaments() {
       <h1 className={styles.h1}>Turnieje</h1>
       <p className={styles.sub}>Dodawanie, edycja i publikacja turniejów.</p>
 
-      {(msg || err) && (
-        <div className={msg ? styles.msgOk : styles.msgErr}>{msg || err}</div>
-      )}
+      {(msg || err) && <div className={msg ? styles.msgOk : styles.msgErr}>{msg || err}</div>}
 
       {/* FORM */}
       <div className={styles.card} style={{ marginBottom: 16 }}>
@@ -220,14 +295,41 @@ export default function AdminTournaments() {
             <input value={form.venue} onChange={(e) => setField("venue", e.target.value)} placeholder="np. Hala XYZ" />
           </label>
 
+          {/* ✅ NOWE DATY */}
           <label className={styles.field}>
-            <span>Start *</span>
-            <input type="date" value={form.startDate} onChange={(e) => setField("startDate", e.target.value)} />
+            <span>Start zapisów *</span>
+            <input
+              type="datetime-local"
+              value={form.regStartAt}
+              onChange={(e) => setField("regStartAt", e.target.value)}
+            />
           </label>
 
           <label className={styles.field}>
-            <span>Koniec *</span>
-            <input type="date" value={form.endDate} onChange={(e) => setField("endDate", e.target.value)} />
+            <span>Koniec zapisów *</span>
+            <input
+              type="datetime-local"
+              value={form.regEndAt}
+              onChange={(e) => setField("regEndAt", e.target.value)}
+            />
+          </label>
+
+          <label className={styles.field}>
+            <span>Start turnieju *</span>
+            <input
+              type="datetime-local"
+              value={form.eventStartAt}
+              onChange={(e) => setField("eventStartAt", e.target.value)}
+            />
+          </label>
+
+          <label className={styles.field}>
+            <span>Koniec turnieju (opcjonalnie)</span>
+            <input
+              type="datetime-local"
+              value={form.eventEndAt}
+              onChange={(e) => setField("eventEndAt", e.target.value)}
+            />
           </label>
 
           <label className={styles.field}>
@@ -303,69 +405,73 @@ export default function AdminTournaments() {
       <div className={styles.list}>
         {loading && <div className={styles.msgOk}>Ładowanie...</div>}
 
-        {!loading && filtered.length === 0 && (
-          <div className={styles.msgErr}>Brak turniejów do wyświetlenia.</div>
-        )}
+        {!loading && filtered.length === 0 && <div className={styles.msgErr}>Brak turniejów do wyświetlenia.</div>}
 
         {!loading &&
-          filtered.map((t) => (
-            <div key={t._id} className={styles.row}>
-              <div className={styles.rowMain}>
-                <strong>{t.title}</strong>
-                <div className={styles.meta}>
-                  <span className={styles.badge}>{t.status}</span>
-                  <span>•</span>
-                  <span>{t.city || "—"}</span>
-                  <span>•</span>
-                  <span>
-                    {formatDateInput(t.startDate)} → {formatDateInput(t.endDate)}
-                  </span>
-                  <span>•</span>
-                  <span>slug: {t.slug}</span>
+          filtered.map((t) => {
+            const rs = regStatusFor(t);
+
+            return (
+              <div key={t._id} className={styles.row}>
+                <div className={styles.rowMain}>
+                  <strong>{t.title}</strong>
+
+                  <div className={styles.meta}>
+                    <span className={styles.badge}>{t.status}</span>
+                    <span>•</span>
+                    <span>{t.city || "—"}</span>
+                    <span>•</span>
+                    <span style={{ opacity: 0.9 }}>
+                      Zapisy: {formatPL(t.regStartAt)} → {formatPL(t.regEndAt)}
+                    </span>
+                    <span>•</span>
+                    <span style={{ opacity: 0.9 }}>
+                      Turniej: {formatPL(t.eventStartAt)}
+                      {t.eventEndAt ? ` → ${formatPL(t.eventEndAt)}` : ""}
+                    </span>
+                    <span>•</span>
+                    <span style={{ opacity: 0.9 }}>Limit: {t.teamLimit ?? 16}</span>
+                    <span>•</span>
+                    <span style={{ opacity: 0.9 }}>Wpisowe: {t.entryFee ?? 0} zł</span>
+                    <span>•</span>
+                    <span>slug: {t.slug}</span>
+                    <span>•</span>
+                    <span className={styles.badge} style={{ opacity: 0.9 }}>
+                      {rs.text}
+                    </span>
+                  </div>
+                </div>
+
+                <div className={styles.rowActions}>
+                  <button className={styles.btn} type="button" onClick={() => beginEdit(t)}>
+                    Edytuj
+                  </button>
+
+                  {t.status !== "published" && (
+                    <button className={styles.btn} type="button" onClick={() => quickStatus(t._id, "published")}>
+                      Opublikuj
+                    </button>
+                  )}
+
+                  {t.status !== "draft" && (
+                    <button className={styles.btn} type="button" onClick={() => quickStatus(t._id, "draft")}>
+                      Cofnij do draft
+                    </button>
+                  )}
+
+                  {t.status !== "archived" && (
+                    <button className={styles.btn} type="button" onClick={() => quickStatus(t._id, "archived")}>
+                      Archiwizuj
+                    </button>
+                  )}
+
+                  <button className={styles.btnDanger} type="button" onClick={() => remove(t._id)}>
+                    Usuń
+                  </button>
                 </div>
               </div>
-
-              <div className={styles.rowActions}>
-                <button className={styles.btn} type="button" onClick={() => beginEdit(t)}>
-                  Edytuj
-                </button>
-
-                {t.status !== "published" && (
-                  <button
-                    className={styles.btn}
-                    type="button"
-                    onClick={() => quickStatus(t._id, "published")}
-                  >
-                    Opublikuj
-                  </button>
-                )}
-
-                {t.status !== "draft" && (
-                  <button
-                    className={styles.btn}
-                    type="button"
-                    onClick={() => quickStatus(t._id, "draft")}
-                  >
-                    Cofnij do draft
-                  </button>
-                )}
-
-                {t.status !== "archived" && (
-                  <button
-                    className={styles.btn}
-                    type="button"
-                    onClick={() => quickStatus(t._id, "archived")}
-                  >
-                    Archiwizuj
-                  </button>
-                )}
-
-                <button className={styles.btnDanger} type="button" onClick={() => remove(t._id)}>
-                  Usuń
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
       </div>
     </div>
   );

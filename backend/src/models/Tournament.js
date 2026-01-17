@@ -10,26 +10,20 @@ const tournamentSchema = new mongoose.Schema(
     city: { type: String, default: "" },
     venue: { type: String, default: "" },
 
-    startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
+    // ✅ OKNO ZAPISÓW
+    regStartAt: { type: Date, required: true },
+    regEndAt: { type: Date, required: true },
+
+    // ✅ TERMIN TURNIEJU (data + godzina)
+    eventStartAt: { type: Date, required: true },
+    // opcjonalnie:
+    eventEndAt: { type: Date, default: null },
 
     description: { type: String, default: "" },
 
-    // limity
     teamLimit: { type: Number, default: 16 },
     entryFee: { type: Number, default: 0 },
 
-    // prosta lista drużyn (na MVP)
-    teams: [
-      {
-        name: { type: String, required: true },
-        captainName: { type: String, default: "" },
-        captainPhone: { type: String, default: "" },
-        createdAt: { type: Date, default: Date.now },
-      },
-    ],
-
-    // audyt
     createdByUid: { type: String, required: true },
     updatedByUid: { type: String, default: "" },
   },

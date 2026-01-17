@@ -40,18 +40,33 @@ router.post("/", auth, requireAdmin, async (req, res) => {
       status,
       city,
       venue,
-      startDate,
-      endDate,
+
+      regStartAt,
+      regEndAt,
+      eventStartAt,
+
       description,
       teamLimit,
       entryFee,
     } = req.body;
 
-    if (!title?.trim() || !startDate || !endDate) {
-      return res
-        .status(400)
-        .json({ message: "Brak wymaganych pól: title/startDate/endDate" });
+    if (!title?.trim() || !regStartAt || !regEndAt || !eventStartAt) {
+      return res.status(400).json({
+        message: "Brak wymaganych pól: title/regStartAt/regEndAt/eventStartAt",
+      });
     }
+
+    // walidacje czasu
+    const rs = new Date(regStartAt);
+    const re = new Date(regEndAt);
+    const es = new Date(eventStartAt);
+
+    if (Number.isNaN(rs.getTime()) || Number.isNaN(re.getTime()) || Number.isNaN(es.getTime())) {
+      return res.status(400).json({ message: "Niepoprawny format daty/czasu" });
+    }
+
+    if (re <= rs) return res.status(400).json({ message: "regEndAt musi być po regStartAt" });
+    if (es <= re) return res.status(400).json({ message: "eventStartAt musi być po zakończeniu zapisów" });
 
     const baseSlug = toSlug((slug && String(slug)) || title);
     const finalSlug = await makeUniqueTournamentSlug(baseSlug);
@@ -62,11 +77,15 @@ router.post("/", auth, requireAdmin, async (req, res) => {
       status: ["draft", "published", "archived"].includes(status) ? status : "draft",
       city: String(city || "").trim(),
       venue: String(venue || "").trim(),
-      startDate,
-      endDate,
+
+      regStartAt: rs,
+      regEndAt: re,
+      eventStartAt: es,
+
       description: String(description || "").trim(),
       teamLimit: Number(teamLimit ?? 16),
       entryFee: Number(entryFee ?? 0),
+
       createdByUid: req.user.uid,
       updatedByUid: req.user.uid,
     });
@@ -84,6 +103,9 @@ router.post("/", auth, requireAdmin, async (req, res) => {
 // ✅ UPDATE
 router.patch("/:id", auth, requireAdmin, async (req, res) => {
   try {
+    const existing = await Tournament.findById(req.params.id).lean();
+    if (!existing) return res.status(404).json({ message: "Nie znaleziono turnieju" });
+
     const payload = { ...req.body, updatedByUid: req.user.uid };
 
     if (payload.slug) payload.slug = toSlug(payload.slug);
@@ -97,12 +119,25 @@ router.patch("/:id", auth, requireAdmin, async (req, res) => {
       const clash = await Tournament.findOne({
         slug: payload.slug,
         _id: { $ne: req.params.id },
-      })
-        .select("_id")
-        .lean();
-
+      }).select("_id").lean();
       if (clash) return res.status(409).json({ message: "Slug już istnieje" });
     }
+
+    // ✅ daty: weź finalne wartości (z payload albo z existing)
+    const rs = payload.regStartAt ? new Date(payload.regStartAt) : new Date(existing.regStartAt);
+    const re = payload.regEndAt ? new Date(payload.regEndAt) : new Date(existing.regEndAt);
+    const es = payload.eventStartAt ? new Date(payload.eventStartAt) : new Date(existing.eventStartAt);
+
+    if ([rs, re, es].some((d) => Number.isNaN(d.getTime()))) {
+      return res.status(400).json({ message: "Niepoprawny format daty/czasu" });
+    }
+    if (re <= rs) return res.status(400).json({ message: "regEndAt musi być po regStartAt" });
+    if (es <= re) return res.status(400).json({ message: "eventStartAt musi być po zakończeniu zapisów" });
+
+    // przypisz znormalizowane daty
+    payload.regStartAt = rs;
+    payload.regEndAt = re;
+    payload.eventStartAt = es;
 
     const updated = await Tournament.findByIdAndUpdate(
       req.params.id,
@@ -110,7 +145,6 @@ router.patch("/:id", auth, requireAdmin, async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    if (!updated) return res.status(404).json({ message: "Nie znaleziono turnieju" });
     res.json(updated);
   } catch (e) {
     if (String(e.message).includes("duplicate key")) {

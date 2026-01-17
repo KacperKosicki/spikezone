@@ -1,40 +1,140 @@
+// Tournaments.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "./Tournaments.module.scss";
-import { FaTrophy, FaMapMarkerAlt, FaCalendarAlt, FaArrowRight } from "react-icons/fa";
+import {
+  FaTrophy,
+  FaMapMarkerAlt,
+  FaCalendarAlt,
+  FaArrowRight,
+  FaRegMoneyBillAlt,
+  FaUsers,
+  FaClock,
+} from "react-icons/fa";
 
 const API = "http://localhost:5000";
 
 export default function Tournaments() {
   const [items, setItems] = useState([]);
-  const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState("Ładowanie...");
   const navigate = useNavigate();
 
   useEffect(() => {
     (async () => {
       try {
-        setErr("");
-        setLoading(true);
+        setMsg("Ładowanie...");
         const res = await fetch(`${API}/api/tournaments`);
         const data = await res.json();
         if (!res.ok) throw new Error(data?.message || "Nie udało się pobrać turniejów");
         setItems(Array.isArray(data) ? data : []);
+        setMsg("");
       } catch (e) {
-        setErr(e.message);
-      } finally {
-        setLoading(false);
+        setMsg(`❌ ${e.message}`);
       }
     })();
   }, []);
 
   const sorted = useMemo(() => {
-    // delikatnie sortujemy po starcie (najbliższe u góry)
-    return [...items].sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+    return [...items].sort((a, b) => new Date(a.eventStartAt) - new Date(b.eventStartAt));
   }, [items]);
+
+  const prettyDate = (d) => {
+    try {
+      return new Date(d).toLocaleDateString("pl-PL");
+    } catch {
+      return "—";
+    }
+  };
+
+  const prettyTime = (d) => {
+    try {
+      return new Date(d).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return "";
+    }
+  };
+
+  // 📅 DATA TURNIEJU na bannerze
+  const eventRange = (t) => {
+    const s = t?.eventStartAt ? new Date(t.eventStartAt) : null;
+    const e = t?.eventEndAt ? new Date(t.eventEndAt) : null;
+
+    if (!s) return "—";
+
+    const sameDay = e ? s.toDateString() === e.toDateString() : true;
+
+    const sDate = prettyDate(s);
+    const sTime = prettyTime(s);
+
+    if (!e) return sTime ? `${sDate} • ${sTime}` : sDate;
+
+    const eDate = prettyDate(e);
+    const eTime = prettyTime(e);
+
+    if (sameDay) {
+      if (sTime && eTime) return `${sDate} • ${sTime}–${eTime}`;
+      return sDate;
+    }
+
+    const left = sTime ? `${sDate} ${sTime}` : sDate;
+    const right = eTime ? `${eDate} ${eTime}` : eDate;
+    return `${left} – ${right}`;
+  };
+
+  // 🟢 STATUS ZAPISÓW (regStartAt / regEndAt)
+  const regStatusFor = (t) => {
+    const now = new Date();
+
+    const rs = t?.regStartAt ? new Date(t.regStartAt) : null;
+    const re = t?.regEndAt ? new Date(t.regEndAt) : null;
+
+    const rsOk = rs && !Number.isNaN(rs.getTime());
+    const reOk = re && !Number.isNaN(re.getTime());
+
+    // zamknięte
+    if (reOk && now > re) return { text: "Zapisy zakończone", tone: "done" };
+
+    // brak startu, ale jest koniec i jeszcze nie minął -> traktuj jako trwające
+    if (!rsOk && reOk && now <= re) return { text: "Zapisy trwają", tone: "live" };
+
+    // jeszcze nie
+    if (rsOk && now < rs) {
+      const diffDays = Math.ceil((rs - now) / (1000 * 60 * 60 * 24));
+      if (diffDays <= 7) return { text: "Zapisy już wkrótce", tone: "soon" };
+      return { text: "Zapisy nieaktywne", tone: "upcoming" };
+    }
+
+    // trwają (start już był i koniec nie minął / brak końca)
+    if (rsOk && (!reOk || now <= re)) return { text: "Zapisy trwają", tone: "live" };
+
+    return { text: "Brak okna zapisów", tone: "neutral" };
+  };
+
+  // 🏆 STATUS TURNIEJU (eventStartAt / eventEndAt)
+  const tournamentStatusFor = (t) => {
+    const now = new Date();
+    const s = t?.eventStartAt ? new Date(t.eventStartAt) : null;
+    const e = t?.eventEndAt ? new Date(t.eventEndAt) : null;
+
+    const sOk = s && !Number.isNaN(s.getTime());
+    const eOk = e && !Number.isNaN(e.getTime());
+
+    if (eOk && now > e) return { text: "Zakończony", tone: "done" };
+    if (sOk && now >= s && (!eOk || now <= e)) return { text: "Trwa", tone: "live" };
+    if (sOk) return { text: "Nadchodzący", tone: "upcoming" };
+    return { text: "Turniej", tone: "neutral" };
+  };
+
+  const metaText = (t) => {
+    const city = t.city || "—";
+    const venue = t.venue ? ` • ${t.venue}` : "";
+    return `${city}${venue}`;
+  };
 
   return (
     <section className={styles.section}>
+      <div className={styles.bgGlow} aria-hidden="true" />
+
       <div className={styles.header}>
         <h1>
           Turnieje <span>SPIKEZONE</span>
@@ -43,56 +143,105 @@ export default function Tournaments() {
       </div>
 
       <div className={styles.container}>
-        {loading && <div className={styles.msg}>Ładowanie...</div>}
-        {err && <div className={`${styles.msg} ${styles.err}`}>❌ {err}</div>}
+        {msg && <div className={styles.msg}>{msg}</div>}
 
-        {!loading && !err && sorted.length === 0 && (
-          <div className={styles.msg}>Brak opublikowanych turniejów.</div>
-        )}
+        {!msg && sorted.length === 0 && <div className={styles.msg}>Brak opublikowanych turniejów.</div>}
 
         <div className={styles.grid}>
-          {sorted.map((t) => (
-            <button
-              key={t._id}
-              className={styles.card}
-              onClick={() => navigate(`/tournaments/${t.slug}`)}
-              type="button"
-            >
-              <div className={styles.top}>
-                <div className={styles.icon}>
-                  <FaTrophy />
+          {sorted.map((t) => {
+            const eventText = eventRange(t);
+            const reg = regStatusFor(t);
+            const ts = tournamentStatusFor(t);
+
+            return (
+              <button
+                key={t._id}
+                className={styles.card}
+                onClick={() => navigate(`/tournaments/${t.slug}`)}
+                type="button"
+                aria-label={`Otwórz turniej ${t.title}`}
+              >
+                {/* MEDIA */}
+                <div className={styles.media}>
+                  {t.bannerUrl ? (
+                    <img
+                      className={styles.banner}
+                      src={t.bannerUrl}
+                      alt={`Banner turnieju ${t.title}`}
+                      loading="lazy"
+                      draggable="false"
+                    />
+                  ) : (
+                    <div className={styles.bannerFallback} />
+                  )}
+
+                  <div className={styles.mediaOverlay} />
+
+                  <div className={styles.logoWrap}>
+                    <div className={styles.logoFallback}>
+                      <FaTrophy />
+                    </div>
+                  </div>
+
+                  {/* corner pills: DATA + ZAPISY */}
+                  <div className={styles.cornerPills}>
+                    <span className={styles.pillSoft}>
+                      <FaCalendarAlt /> {eventText}
+                    </span>
+
+                    <span className={`${styles.regPill} ${styles[`reg_${reg.tone}`]}`}>
+                      <FaClock /> {reg.text}
+                    </span>
+                  </div>
                 </div>
 
-                <div className={styles.badge}>
-                  <FaCalendarAlt />{" "}
-                  {new Date(t.startDate).toLocaleDateString("pl-PL")} –{" "}
-                  {new Date(t.endDate).toLocaleDateString("pl-PL")}
+                {/* TOP: ikonka + STATUS TURNIEJU */}
+                <div className={styles.top}>
+                  <div className={styles.icon}>
+                    <FaTrophy />
+                  </div>
+
+                  <div className={styles.pillsRow}>
+                    <div className={`${styles.statusPill} ${styles[`status_${ts.tone}`]}`}>
+                      <span className={styles.dot} aria-hidden="true" />
+                      {ts.text}
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div className={styles.title}>{t.title}</div>
+                <div className={styles.title} title={t.title}>
+                  {t.title}
+                </div>
 
-              <div className={styles.meta}>
-                <span className={styles.metaItem}>
-                  <FaMapMarkerAlt />
-                  {t.city || "—"}
-                </span>
+                <div className={styles.meta} title={metaText(t)}>
+                  <span className={styles.metaItem}>
+                    <FaMapMarkerAlt />
+                    {t.city || "—"}
+                  </span>
 
-                {!!t.venue && <span className={styles.metaSep}>•</span>}
+                  {!!t.venue && <span className={styles.metaSep}>•</span>}
+                  {!!t.venue && <span className={styles.venue}>{t.venue}</span>}
+                </div>
 
-                {!!t.venue && <span className={styles.venue}>{t.venue}</span>}
-              </div>
+                {/* mini-stats */}
+                <div className={styles.statsRow}>
+                  <span className={styles.statPill}>
+                    <FaUsers /> Limit: {t.teamLimit ?? 16}
+                  </span>
 
-              <div className={styles.footer}>
-                <span className={styles.pill}>Limit: {t.teamLimit ?? 16}</span>
-                <span className={styles.pill}>Wpisowe: {t.entryFee ?? 0} zł</span>
+                  <span className={styles.statPill}>
+                    <FaRegMoneyBillAlt /> Wpisowe: {t.entryFee ?? 0} zł
+                  </span>
+                </div>
 
-                <span className={styles.open}>
-                  Zobacz <FaArrowRight />
-                </span>
-              </div>
-            </button>
-          ))}
+                <div className={styles.footer}>
+                  <span className={styles.open}>
+                    Zobacz szczegóły <FaArrowRight />
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </section>

@@ -4,7 +4,7 @@ const Tournament = require("../models/Tournament");
 
 // lista opublikowanych
 router.get("/", async (req, res) => {
-  const items = await Tournament.find({ status: "published" }).sort({ startDate: 1 });
+  const items = await Tournament.find({ status: "published" }).sort({ eventStartAt: 1 });
   res.json(items);
 });
 

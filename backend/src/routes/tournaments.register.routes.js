@@ -16,7 +16,33 @@ router.post("/:slug/register", auth, async (req, res) => {
 
     const tournament = await Tournament.findOne({ slug, status: "published" }).lean();
     if (!tournament) {
-      return res.status(404).json({ code: "TOURNAMENT_NOT_FOUND", message: "Nie znaleziono turnieju" });
+      return res.status(404).json({
+        code: "TOURNAMENT_NOT_FOUND",
+        message: "Nie znaleziono turnieju",
+      });
+    }
+
+    // ✅ BLOKADA OKNA ZAPISÓW (regStartAt / regEndAt)
+    const now = new Date();
+
+    if (tournament.regStartAt) {
+      const rs = new Date(tournament.regStartAt);
+      if (!Number.isNaN(rs.getTime()) && now < rs) {
+        return res.status(409).json({
+          code: "REGISTRATION_NOT_STARTED",
+          message: "Zapisy jeszcze się nie rozpoczęły.",
+        });
+      }
+    }
+
+    if (tournament.regEndAt) {
+      const re = new Date(tournament.regEndAt);
+      if (!Number.isNaN(re.getTime()) && now > re) {
+        return res.status(409).json({
+          code: "REGISTRATION_CLOSED",
+          message: "Zapisy zostały zakończone — nie można już dołączyć.",
+        });
+      }
     }
 
     const team = await Team.findOne({ ownerUid: uid }).lean();
@@ -63,8 +89,12 @@ router.post("/:slug/register", auth, async (req, res) => {
 
     const limit = Number.isFinite(tournament.teamLimit) ? tournament.teamLimit : 16;
     const count = await TournamentRegistration.countDocuments({ tournamentId: tournament._id });
+
     if (count >= limit) {
-      return res.status(409).json({ code: "TOURNAMENT_FULL", message: "Limit drużyn został osiągnięty." });
+      return res.status(409).json({
+        code: "TOURNAMENT_FULL",
+        message: "Limit drużyn został osiągnięty.",
+      });
     }
 
     const reg = await TournamentRegistration.create({
@@ -121,19 +151,14 @@ router.get("/:slug/registrations", async (req, res) => {
       .lean();
 
     // ✅ CLEANUP / FILTER: nie pokazuj zgłoszeń, których team już nie istnieje
-    // (po usunięciu drużyny snapshot w registrations zostaje, więc usuwamy takie wpisy albo filtrujemy)
     const teamIds = itemsRaw.map((x) => x.teamId).filter(Boolean);
+
     const existingTeams = await Team.find({ _id: { $in: teamIds }, status: "approved" })
       .select("_id")
       .lean();
 
     const existingSet = new Set(existingTeams.map((t) => String(t._id)));
-
     const items = itemsRaw.filter((x) => existingSet.has(String(x.teamId)));
-
-    // opcjonalnie: automatycznie usuń-duchy z bazy (odkomentuj jeśli chcesz hard cleanup)
-    // const ghostIds = itemsRaw.filter((x) => !existingSet.has(String(x.teamId))).map((x) => x._id);
-    // if (ghostIds.length) await TournamentRegistration.deleteMany({ _id: { $in: ghostIds } });
 
     return res.json({
       stats: { count: items.length, limit },
