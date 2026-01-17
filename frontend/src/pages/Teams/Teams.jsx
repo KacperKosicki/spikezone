@@ -13,7 +13,7 @@ export default function Teams() {
     (async () => {
       try {
         setMsg("Ładowanie...");
-        const data = await apiFetch("/api/teams"); // public
+        const data = await apiFetch("/api/teams");
         setItems(Array.isArray(data) ? data : []);
         setMsg("");
       } catch (e) {
@@ -23,19 +23,22 @@ export default function Teams() {
   }, []);
 
   const sorted = useMemo(() => {
-    // alfabetycznie (możesz zmienić na np. po createdAt jeśli masz)
-    return [...items].sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "pl"));
+    return [...items].sort((a, b) =>
+      String(a.name || "").localeCompare(String(b.name || ""), "pl")
+    );
   }, [items]);
 
   const badgeFor = (t) => {
     const s = String(t.status || "").toLowerCase();
-    if (s === "approved") return { icon: <FaCheckCircle />, text: "Zaakceptowana" };
-    if (s === "pending") return { icon: <FaClock />, text: "W trakcie" };
-    return { icon: <FaUsers />, text: (t.status || "Drużyna") };
+    if (s === "approved") return { icon: <FaCheckCircle />, text: "Zaakceptowana", tone: "ok" };
+    if (s === "pending") return { icon: <FaClock />, text: "W trakcie", tone: "pending" };
+    return { icon: <FaUsers />, text: t.status || "Drużyna", tone: "default" };
   };
 
   return (
     <section className={styles.section}>
+      <div className={styles.bgGlow} aria-hidden="true" />
+
       <div className={styles.header}>
         <h1>
           Drużyny <span>SPIKEZONE</span>
@@ -63,23 +66,57 @@ export default function Teams() {
                 type="button"
                 aria-label={`Otwórz drużynę ${t.name}`}
               >
+                {/* MEDIA */}
+                <div className={styles.media}>
+                  {t.bannerUrl ? (
+                    <img
+                      className={styles.banner}
+                      src={t.bannerUrl}
+                      alt={`Banner drużyny ${t.name}`}
+                      loading="lazy"
+                      draggable="false"
+                    />
+                  ) : (
+                    <div className={styles.bannerFallback} />
+                  )}
+
+                  <div className={styles.mediaOverlay} />
+
+                  <div className={styles.logoWrap}>
+                    {t.logoUrl ? (
+                      <img
+                        className={styles.logo}
+                        src={t.logoUrl}
+                        alt={`Logo drużyny ${t.name}`}
+                        loading="lazy"
+                        draggable="false"
+                      />
+                    ) : (
+                      <div className={styles.logoFallback}>
+                        {String(t.name || "?").slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* top-right pills na bannerze */}
+                  <div className={styles.cornerPills}>
+                    <span className={styles.pillSoft}>{membersCount} zawodników</span>
+                  </div>
+                </div>
+
+                {/* TOP ROW */}
                 <div className={styles.top}>
                   <div className={styles.icon}>
                     <FaUsers />
                   </div>
 
-                  <div className={styles.badge}>
+                  <div className={`${styles.badge} ${styles[`badge_${b.tone}`]}`}>
                     {b.icon} {b.text}
                   </div>
                 </div>
 
-                <div className={styles.title}>{t.name}</div>
-
-                <div className={styles.meta}>
-                  <span className={styles.metaItem}>
-                    <FaUsers />
-                    {membersCount} zawodników
-                  </span>
+                <div className={styles.title} title={t.name}>
+                  {t.name}
                 </div>
 
                 {t.description ? (
@@ -92,11 +129,8 @@ export default function Teams() {
                 )}
 
                 <div className={styles.footer}>
-                  <span className={styles.pill}>Status: {t.status || "—"}</span>
-                  <span className={styles.pill}>Skład: {membersCount}</span>
-
                   <span className={styles.open}>
-                    Zobacz <FaArrowRight />
+                    Zobacz szczegóły drużyny<FaArrowRight />
                   </span>
                 </div>
               </button>

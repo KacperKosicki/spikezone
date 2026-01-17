@@ -52,31 +52,51 @@ export default function MyTeam() {
   }, [team]);
 
   const isPending = team?.status === "pending";
-  const bannerBg = team?.bannerUrl || "";
-  const logoImg = team?.logoUrl || "";
+  const membersCount = useMemo(() => team?.members?.length || 0, [team]);
 
+  // loading
   if (msg && !team) {
     return (
-      <section className={styles.page}>
+      <section className={styles.section}>
+        <div className={styles.bgGlow} aria-hidden="true" />
         <div className={styles.container}>
-          <button className={styles.back} onClick={() => navigate("/teams")}>
-            ← Wróć
+          <button
+            className={styles.backModern}
+            onClick={() => navigate("/teams")}
+            type="button"
+          >
+            <span className={styles.backIcon}>←</span>
+            <span>Wróć do listy</span>
           </button>
+
           <div className={styles.msg}>{msg}</div>
         </div>
       </section>
     );
   }
 
+  // no team
   if (!team) {
     return (
-      <section className={styles.page}>
+      <section className={styles.section}>
+        <div className={styles.bgGlow} aria-hidden="true" />
         <div className={styles.container}>
-          <button className={styles.back} onClick={() => navigate("/teams")}>
-            ← Wróć
+          <button
+            className={styles.backModern}
+            onClick={() => navigate("/teams")}
+            type="button"
+          >
+            <span className={styles.backIcon}>←</span>
+            <span>Wróć do listy</span>
           </button>
+
           <div className={styles.msg}>Nie masz drużyny. Utwórz ją tutaj:</div>
-          <button className={styles.btnPrimary} onClick={() => navigate("/team/create")}>
+
+          <button
+            className={styles.btnPrimary}
+            onClick={() => navigate("/team/create")}
+            type="button"
+          >
             Stwórz drużynę
           </button>
         </div>
@@ -85,91 +105,155 @@ export default function MyTeam() {
   }
 
   return (
-    <section className={styles.page}>
+    <section className={styles.section}>
+      <div className={styles.bgGlow} aria-hidden="true" />
       <div className={styles.container}>
-        <button className={styles.back} onClick={() => navigate("/teams")}>
-          ← Wróć
+        <button
+          className={styles.backModern}
+          onClick={() => navigate("/teams")}
+          type="button"
+        >
+          <span className={styles.backIcon}>←</span>
+          <span>Wróć do listy</span>
         </button>
 
         {/* ✅ komunikat po edycji */}
         {flash && <div className={styles.msg}>{flash}</div>}
 
-        <div className={styles.shell}>
-          <div className={styles.cover}>
-            {bannerBg ? (
-              <div
-                className={styles.coverImage}
-                style={{ backgroundImage: `url("${bannerBg}")` }}
-              />
-            ) : (
-              <div className={styles.coverPlaceholder} />
-            )}
+        <div className={styles.detailsCard}>
+          {/* HEADER (jak TeamDetails) */}
+          <div className={styles.top}>
+            <div className={styles.media}>
+              {team.bannerUrl ? (
+                <img
+                  className={styles.banner}
+                  src={team.bannerUrl}
+                  alt={`Banner drużyny ${team.name}`}
+                  loading="lazy"
+                  draggable="false"
+                />
+              ) : (
+                <div className={styles.bannerFallback} />
+              )}
 
-            <div className={styles.coverOverlay} />
+              <div className={styles.mediaOverlay} />
 
-            <div className={styles.coverBar}>
-              <div className={styles.logoWrap}>
-                {logoImg ? (
-                  <img className={styles.logo} src={logoImg} alt="Logo drużyny" />
-                ) : (
-                  <div className={styles.logoPlaceholder}>LOGO</div>
-                )}
-              </div>
+              {/* ✅ coverBar: logo | headerText | headerActions */}
+              <div className={styles.coverBar}>
+                <div className={styles.logoWrap}>
+                  {team.logoUrl ? (
+                    <img
+                      className={styles.logo}
+                      src={team.logoUrl}
+                      alt="Logo drużyny"
+                      loading="lazy"
+                      draggable="false"
+                    />
+                  ) : (
+                    <div className={styles.logoFallback}>
+                      {String(team.name || "?").slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                </div>
 
-              <div className={styles.headerText}>
-                <h1 className={styles.teamName}>{team.name}</h1>
+                <div className={styles.headerText}>
+                  <h1 className={styles.teamName}>{team.name}</h1>
 
-                <div className={styles.metaRow}>
-                  <span className={styles.badge}>{statusText}</span>
-                  <span className={styles.badge}>
-                    {team.members?.length || 0} zawodników
-                  </span>
+                  <div className={styles.pills}>
+                    <span
+                      className={`${styles.pillSoft} ${
+                        team.status === "rejected" ? styles.pillBad : styles.pillOk
+                      }`}
+                    >
+                      <span
+                        className={`${styles.dot} ${
+                          team.status === "rejected" ? styles.dotBad : ""
+                        }`}
+                      />
+                      {statusText}
+                    </span>
+
+                    <span className={styles.pillSoft}>
+                      {membersCount} zawodników
+                    </span>
+                  </div>
+                </div>
+
+                <div className={styles.headerActions}>
+                  <button
+                    className={styles.btnGhost}
+                    onClick={() => navigate("/team/edit")}
+                    disabled={isPending}
+                    title={
+                      isPending
+                        ? "Drużyna jest w trakcie rozpatrywania – edycja zablokowana"
+                        : "Edytuj drużynę"
+                    }
+                    type="button"
+                  >
+                    {isPending ? "Edycja zablokowana" : "Edytuj drużynę"}
+                  </button>
                 </div>
               </div>
-
-              <div className={styles.headerActions}>
-                <button
-                  className={styles.btnGhost}
-                  onClick={() => navigate("/team/edit")}
-                  disabled={isPending}
-                  title={
-                    isPending
-                      ? "Drużyna jest w trakcie rozpatrywania – edycja zablokowana"
-                      : "Edytuj drużynę"
-                  }
-                >
-                  {isPending ? "Edycja zablokowana" : "Edytuj drużynę"}
-                </button>
-              </div>
             </div>
           </div>
 
-          <div className={styles.card}>
-            {team.adminNote && (
-              <div className={styles.note}>
-                <strong>Uwaga od admina:</strong> {team.adminNote}
+          {/* BODY */}
+          {team.adminNote && (
+            <div className={styles.note}>
+              <strong>Uwaga od administratora:</strong> {team.adminNote}
+            </div>
+          )}
+
+          {/* OPIS (jak TeamDetails) */}
+          <div className={styles.block}>
+            <div className={styles.blockHead}>
+              <div className={styles.blockTitle}>
+                <h2>Opis drużyny</h2>
+                <span className={styles.blockSub}>Informacje o zespole</span>
               </div>
+              <span className={styles.blockBadge}>INFO</span>
+            </div>
+
+            {team.description ? (
+              <div className={styles.desc}>{team.description}</div>
+            ) : (
+              <div className={styles.msgInline}>Brak opisu drużyny.</div>
             )}
-
-            {team.description && <p className={styles.desc}>{team.description}</p>}
-
-            <div className={styles.section}>
-              <h2>Skład</h2>
-              <ul className={styles.teamList}>
-                {(team.members || []).map((m, idx) => (
-                  <li key={idx} className={styles.teamItem}>
-                    <strong>{m.fullName}</strong>
-                  </li>
-                ))}
-              </ul>
-            </div>
           </div>
 
+          {/* SKŁAD (jak TeamDetails) */}
+          <div className={styles.block}>
+            <div className={styles.blockHead}>
+              <div className={styles.blockTitle}>
+                <h2>Skład</h2>
+                <span className={styles.blockSub}>Lista zawodników w drużynie</span>
+              </div>
+              <span className={styles.blockBadge}>{membersCount}</span>
+            </div>
+
+            <ul className={styles.membersGrid}>
+              {(team.members || []).map((m, idx) => (
+                <li key={idx} className={styles.memberCard}>
+                  <div className={styles.memberLeft}>
+                    <span className={styles.memberIndex}>
+                      {String(idx + 1).padStart(2, "0")}
+                    </span>
+                    <span className={styles.memberName}>{m.fullName}</span>
+                  </div>
+
+                  <span className={styles.memberTag}>ZAWODNIK</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* pending info */}
           {isPending && (
             <div className={styles.pendingInfo}>
               ⏳ Twoja drużyna jest w trakcie rozpatrywania. W tym czasie nie możesz
               zmieniać żadnych danych (w tym logo i bannera). Edycja będzie dostępna
-              po decyzji admina.
+              po decyzji administratora.
             </div>
           )}
         </div>

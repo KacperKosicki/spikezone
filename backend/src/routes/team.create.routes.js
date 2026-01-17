@@ -15,7 +15,7 @@ router.post("/", auth, async (req, res) => {
         const nameTrim = String(name || "").trim();
         if (!nameTrim) return res.status(400).json({ message: "Podaj nazwę drużyny" });
         if (nameTrim.length < 2) return res.status(400).json({ message: "Nazwa min. 2 znaki" });
-        if (nameTrim.length > 40) return res.status(400).json({ message: "Nazwa max 40 znaków" });
+        if (nameTrim.length > 60) return res.status(400).json({ message: "Nazwa max 60 znaków" });
 
         const exists = await Team.findOne({ ownerUid: uid });
         if (exists) return res.status(409).json({ message: "Masz już drużynę" });

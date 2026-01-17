@@ -12,8 +12,6 @@ export default function CreateTeam() {
   const [editMode, setEditMode] = useState(false);
 
   const [name, setName] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
-  const [bannerUrl, setBannerUrl] = useState("");
   const [description, setDescription] = useState("");
   const [members, setMembers] = useState([{ fullName: "" }]);
 
@@ -23,12 +21,17 @@ export default function CreateTeam() {
   // status: idle | invalid | checking | ok | taken | error
   const [nameCheck, setNameCheck] = useState({ status: "idle", message: "" });
 
-  // pliki do uploadu (działają też przy create)
   const [logoFile, setLogoFile] = useState(null);
   const [bannerFile, setBannerFile] = useState(null);
 
-  const logoPreview = useMemo(() => (logoFile ? URL.createObjectURL(logoFile) : ""), [logoFile]);
-  const bannerPreview = useMemo(() => (bannerFile ? URL.createObjectURL(bannerFile) : ""), [bannerFile]);
+  const logoPreview = useMemo(
+    () => (logoFile ? URL.createObjectURL(logoFile) : ""),
+    [logoFile]
+  );
+  const bannerPreview = useMemo(
+    () => (bannerFile ? URL.createObjectURL(bannerFile) : ""),
+    [bannerFile]
+  );
 
   useEffect(() => {
     return () => {
@@ -38,8 +41,15 @@ export default function CreateTeam() {
   }, [logoPreview, bannerPreview]);
 
   const canAddMember = useMemo(() => members.length < 10, [members.length]);
+  const membersCount = useMemo(
+    () =>
+      members
+        .map((m) => String(m?.fullName || "").trim())
+        .filter(Boolean).length,
+    [members]
+  );
 
-  // load my team -> edit/create mode
+  // load my team -> jeśli istnieje, przenosimy na /team/me
   useEffect(() => {
     (async () => {
       try {
@@ -47,8 +57,6 @@ export default function CreateTeam() {
         setMsg("");
 
         const team = await apiFetch("/api/team/me");
-
-        // jeśli team istnieje -> nie siedzimy w create, przenosimy na /team/me
         if (team) {
           navigate("/team/me", { replace: true });
           return;
@@ -56,7 +64,6 @@ export default function CreateTeam() {
 
         setEditMode(false);
       } catch (e) {
-        // jeśli brak tokena albo inny błąd, pokaż info
         setMsg(`❌ ${e.message}`);
       } finally {
         setLoading(false);
@@ -78,8 +85,8 @@ export default function CreateTeam() {
       setNameCheck({ status: "invalid", message: "❌ Nazwa min. 2 znaki" });
       return;
     }
-    if (n.length > 40) {
-      setNameCheck({ status: "invalid", message: "❌ Nazwa max 40 znaków" });
+    if (n.length > 60) {
+      setNameCheck({ status: "invalid", message: "❌ Nazwa max 60 znaków" });
       return;
     }
 
@@ -101,10 +108,12 @@ export default function CreateTeam() {
   const updateMember = (idx, value) => {
     setMembers((prev) => prev.map((m, i) => (i === idx ? { fullName: value } : m)));
   };
+
   const addMember = () => {
     if (!canAddMember) return;
     setMembers((prev) => [...prev, { fullName: "" }]);
   };
+
   const removeMember = (idx) => {
     setMembers((prev) => prev.filter((_, i) => i !== idx));
   };
@@ -112,7 +121,8 @@ export default function CreateTeam() {
   const validateAndBuildMembers = () => {
     const normalized = members.map((m) => String(m.fullName || "").trim());
     const invalidIdx = normalized.findIndex((v) => v.length > 0 && v.length < 3);
-    if (invalidIdx !== -1) return { ok: false, message: `❌ Zawodnik #${invalidIdx + 1} musi mieć min. 3 znaki` };
+    if (invalidIdx !== -1)
+      return { ok: false, message: `❌ Zawodnik #${invalidIdx + 1} musi mieć min. 3 znaki` };
 
     const nonEmpty = normalized.filter((v) => v.length > 0);
     if (nonEmpty.length === 0) return { ok: false, message: "❌ Dodaj przynajmniej jednego zawodnika" };
@@ -128,7 +138,7 @@ export default function CreateTeam() {
   const canSubmitCreate =
     !saving &&
     name.trim().length >= 2 &&
-    name.trim().length <= 40 &&
+    name.trim().length <= 60 &&
     nameCheck.status === "ok";
 
   const uploadImage = async (kind, file) => {
@@ -145,7 +155,7 @@ export default function CreateTeam() {
 
     if (!nameTrim) return setMsg("❌ Podaj nazwę drużyny");
     if (nameTrim.length < 2) return setMsg("❌ Nazwa drużyny musi mieć min. 2 znaki");
-    if (nameTrim.length > 40) return setMsg("❌ Nazwa drużyny może mieć max 40 znaków");
+    if (nameTrim.length > 60) return setMsg("❌ Nazwa drużyny może mieć max 60 znaków");
 
     if (nameCheck.status === "checking") return setMsg("⏳ Sprawdzam dostępność nazwy...");
     if (nameCheck.status === "taken") return setMsg("❌ Ta nazwa drużyny jest już zajęta");
@@ -153,8 +163,6 @@ export default function CreateTeam() {
 
     const membersRes = validateAndBuildMembers();
     if (!membersRes.ok) return setMsg(membersRes.message);
-
-    const cleanMembers = membersRes.members;
 
     try {
       setSaving(true);
@@ -167,7 +175,7 @@ export default function CreateTeam() {
           logoUrl: "",
           bannerUrl: "",
           description: description.trim(),
-          members: cleanMembers,
+          members: membersRes.members,
         },
       });
 
@@ -177,7 +185,6 @@ export default function CreateTeam() {
 
       await refreshMyTeam?.();
 
-      // ✅ PRZENOSIMY Z FLASH MESSAGE
       navigate("/team/me", {
         replace: true,
         state: { flash: "✅ Drużyna wysłana do weryfikacji. Status: ROZPATRYWANIE." },
@@ -191,10 +198,12 @@ export default function CreateTeam() {
 
   if (loading) {
     return (
-      <section className={styles.page}>
+      <section className={styles.section}>
+        <div className={styles.bgGlow} aria-hidden="true" />
         <div className={styles.container}>
-          <button className={styles.back} onClick={() => navigate("/teams")}>
-            ← Wróć
+          <button className={styles.backModern} onClick={() => navigate("/teams")} type="button">
+            <span className={styles.backIcon}>←</span>
+            <span>Wróć</span>
           </button>
           <div className={styles.msg}>Ładowanie...</div>
         </div>
@@ -203,111 +212,183 @@ export default function CreateTeam() {
   }
 
   return (
-    <section className={styles.page}>
+    <section className={styles.section}>
+      <div className={styles.bgGlow} aria-hidden="true" />
       <div className={styles.container}>
-        <button className={styles.back} onClick={() => navigate("/teams")}>
-          ← Wróć
+        <button className={styles.backModern} onClick={() => navigate("/teams")} type="button">
+          <span className={styles.backIcon}>←</span>
+          <span>Wróć</span>
         </button>
-
-        <h1 className={styles.h1}>Stwórz drużynę</h1>
-        <p className={styles.sub}>Po wysłaniu drużyna trafia do moderacji. Możesz od razu dodać logo i banner.</p>
 
         {msg && <div className={styles.msg}>{msg}</div>}
 
-        <form className={styles.form} onSubmit={onSubmit}>
-          <div className={styles.grid}>
-            <label className={styles.field}>
-              <span>Nazwa drużyny *</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} disabled={saving} />
-
-              {nameCheck.message && (
-                <div
-                  className={`${styles.nameHint} ${
-                    nameCheck.status === "ok"
-                      ? styles.nameOk
-                      : nameCheck.status === "checking"
-                      ? styles.nameChecking
-                      : styles.nameBad
-                  }`}
-                >
-                  {nameCheck.message}
-                </div>
+        <div className={styles.detailsCard}>
+          {/* HEADER: media + coverBar jak reszta */}
+          <div className={styles.top}>
+            <div className={styles.media}>
+              {bannerPreview ? (
+                <img className={styles.banner} src={bannerPreview} alt="Podgląd bannera" />
+              ) : (
+                <div className={styles.bannerFallback} />
               )}
-            </label>
 
-            <label className={styles.field}>
-              <span>Logo (plik)</span>
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                disabled={saving}
-              />
-              {logoPreview && <img className={styles.preview} src={logoPreview} alt="logo preview" />}
-            </label>
+              <div className={styles.mediaOverlay} />
 
-            <label className={styles.field}>
-              <span>Banner (plik)</span>
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
-                disabled={saving}
-              />
-              {bannerPreview && <img className={styles.previewBanner} src={bannerPreview} alt="banner preview" />}
-            </label>
+              <div className={styles.coverBar}>
+                <div className={styles.logoWrap}>
+                  {logoPreview ? (
+                    <img className={styles.logo} src={logoPreview} alt="Podgląd logo" />
+                  ) : (
+                    <div className={styles.logoFallback}>
+                      {String(name || "?").slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                </div>
 
-            <label className={`${styles.field} ${styles.full}`}>
-              <span>Opis</span>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={6}
-                maxLength={2000}
-                disabled={saving}
-              />
-            </label>
+                <div className={styles.headerText}>
+                  <h1 className={styles.teamName}>Stwórz drużynę</h1>
+
+                  <div className={styles.pills}>
+                    <span className={`${styles.pillSoft} ${styles.pillOk}`}>
+                      <span className={styles.dot} />
+                      TWORZENIE
+                    </span>
+                    <span className={styles.pillSoft}>{membersCount} zawodników</span>
+                  </div>
+                </div>
+
+                <div className={styles.headerActions} aria-hidden="true" />
+              </div>
+            </div>
           </div>
 
-          <div className={styles.section}>
-            <h2>Skład (max 10)</h2>
+          {/* FORM */}
+          <div className={styles.block}>
+            <div className={styles.blockHead}>
+              <div className={styles.blockTitle}>
+                <h2>Dane drużyny</h2>
+                <span className={styles.blockSub}>
+                  Po wysłaniu drużyna trafia do moderacji. Możesz od razu dodać logo i banner.
+                </span>
+              </div>
+              <span className={styles.blockBadge}>CREATE</span>
+            </div>
 
-            <div className={styles.members}>
-              {members.map((m, idx) => (
-                <div className={styles.memberRow} key={idx}>
+            <form className={styles.form} onSubmit={onSubmit}>
+              <div className={styles.grid}>
+                <label className={styles.field}>
+                  <span>Nazwa drużyny *</span>
                   <input
-                    className={styles.memberInput}
-                    placeholder="Imię i nazwisko"
-                    value={m.fullName}
-                    onChange={(e) => updateMember(idx, e.target.value)}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     maxLength={60}
                     disabled={saving}
                   />
-                  {members.length > 1 && (
-                    <button
-                      type="button"
-                      className={styles.memberRemove}
-                      onClick={() => removeMember(idx)}
-                      disabled={saving}
+
+                  {nameCheck.message && (
+                    <div
+                      className={`${styles.nameHint} ${
+                        nameCheck.status === "ok"
+                          ? styles.nameOk
+                          : nameCheck.status === "checking"
+                          ? styles.nameChecking
+                          : styles.nameBad
+                      }`}
                     >
-                      Usuń
-                    </button>
+                      {nameCheck.message}
+                    </div>
                   )}
+                </label>
+
+                <label className={styles.field}>
+                  <span>Logo (plik)</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                    disabled={saving}
+                  />
+                  {logoPreview && <img className={styles.preview} src={logoPreview} alt="logo preview" />}
+                </label>
+
+                <label className={styles.field}>
+                  <span>Banner (plik)</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
+                    disabled={saving}
+                  />
+                  {bannerPreview && (
+                    <img className={styles.previewBanner} src={bannerPreview} alt="banner preview" />
+                  )}
+                </label>
+
+                <label className={`${styles.field} ${styles.full}`}>
+                  <span>Opis</span>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={6}
+                    maxLength={2000}
+                    disabled={saving}
+                  />
+                </label>
+              </div>
+
+              <div className={styles.blockInner}>
+                <div className={styles.blockHead}>
+                  <div className={styles.blockTitle}>
+                    <h2>Skład</h2>
+                    <span className={styles.blockSub}>Lista zawodników w drużynie (max 10)</span>
+                  </div>
+                  <span className={styles.blockBadge}>{membersCount}</span>
                 </div>
-              ))}
-            </div>
 
-            <button type="button" className={styles.addMember} onClick={addMember} disabled={!canAddMember || saving}>
-              + Dodaj zawodnika
-            </button>
-          </div>
+                <div className={styles.members}>
+                  {members.map((m, idx) => (
+                    <div className={styles.memberRow} key={idx}>
+                      <input
+                        className={styles.memberInput}
+                        placeholder="Imię i nazwisko"
+                        value={m.fullName}
+                        onChange={(e) => updateMember(idx, e.target.value)}
+                        maxLength={60}
+                        disabled={saving}
+                      />
 
-          <div className={styles.actions}>
-            <button className={styles.btnPrimary} disabled={!canSubmitCreate || saving}>
-              {saving ? "Wysyłanie..." : "Wyślij do weryfikacji"}
-            </button>
+                      {members.length > 1 && (
+                        <button
+                          type="button"
+                          className={styles.memberRemove}
+                          onClick={() => removeMember(idx)}
+                          disabled={saving}
+                        >
+                          Usuń
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className={styles.addMember}
+                  onClick={addMember}
+                  disabled={!canAddMember || saving}
+                >
+                  + Dodaj zawodnika
+                </button>
+              </div>
+
+              <div className={styles.actions}>
+                <button className={styles.btnPrimary} disabled={!canSubmitCreate || saving} type="submit">
+                  {saving ? "Wysyłanie..." : "Wyślij do weryfikacji"}
+                </button>
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
       </div>
     </section>
   );

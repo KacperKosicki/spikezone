@@ -35,12 +35,18 @@ export default function EditTeam() {
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // ✅ snapshot początkowych danych (żeby wykryć realne zmiany)
+  // snapshot początkowych danych
   const initialDescRef = useRef("");
   const initialMembersRef = useRef([]);
 
-  const logoPreview = useMemo(() => (logoFile ? URL.createObjectURL(logoFile) : ""), [logoFile]);
-  const bannerPreview = useMemo(() => (bannerFile ? URL.createObjectURL(bannerFile) : ""), [bannerFile]);
+  const logoPreview = useMemo(
+    () => (logoFile ? URL.createObjectURL(logoFile) : ""),
+    [logoFile]
+  );
+  const bannerPreview = useMemo(
+    () => (bannerFile ? URL.createObjectURL(bannerFile) : ""),
+    [bannerFile]
+  );
 
   useEffect(() => {
     return () => {
@@ -64,9 +70,10 @@ export default function EditTeam() {
         setTeam(data);
 
         const desc = data.description || "";
-        const mems = Array.isArray(data.members) && data.members.length
-          ? data.members.map((m) => ({ fullName: m.fullName || "" }))
-          : [{ fullName: "" }];
+        const mems =
+          Array.isArray(data.members) && data.members.length
+            ? data.members.map((m) => ({ fullName: m.fullName || "" }))
+            : [{ fullName: "" }];
 
         setDescription(desc);
         setMembers(mems);
@@ -74,7 +81,6 @@ export default function EditTeam() {
         setLogoUrl(data.logoUrl || "");
         setBannerUrl(data.bannerUrl || "");
 
-        // snapshot do porównania
         initialDescRef.current = String(desc || "").trim();
         initialMembersRef.current = normalizeMembers(data.members);
       } catch (e) {
@@ -86,7 +92,9 @@ export default function EditTeam() {
   }, [navigate]);
 
   const isPending = team?.status === "pending";
-  const lockTextFields = isPending; // pending blokuje opis/skład
+  const lockTextFields = isPending;
+
+  const membersCount = useMemo(() => normalizeMembers(members).length, [members]);
 
   const updateMember = (idx, value) => {
     setMembers((prev) => prev.map((m, i) => (i === idx ? { fullName: value } : m)));
@@ -105,11 +113,14 @@ export default function EditTeam() {
   const validateMembers = () => {
     const normalized = normalizeMembers(members);
 
-    if (normalized.length === 0) return { ok: false, message: "❌ Dodaj przynajmniej jednego zawodnika" };
-    if (normalized.length > 10) return { ok: false, message: "❌ Maksymalnie 10 zawodników" };
+    if (normalized.length === 0)
+      return { ok: false, message: "❌ Dodaj przynajmniej jednego zawodnika" };
+    if (normalized.length > 10)
+      return { ok: false, message: "❌ Maksymalnie 10 zawodników" };
 
     const invalidIdx = normalized.findIndex((v) => v.length < 3);
-    if (invalidIdx !== -1) return { ok: false, message: `❌ Zawodnik #${invalidIdx + 1} min. 3 znaki` };
+    if (invalidIdx !== -1)
+      return { ok: false, message: `❌ Zawodnik #${invalidIdx + 1} min. 3 znaki` };
 
     return { ok: true, members: normalized.map((fullName) => ({ fullName })) };
   };
@@ -129,17 +140,14 @@ export default function EditTeam() {
     const didUploadLogo = !!logoFile;
     const didUploadBanner = !!bannerFile;
 
-    // ✅ wykryj czy teksty faktycznie się zmieniły
     const nextDescTrim = String(description || "").trim();
     const nextMembersNorm = normalizeMembers(members);
 
     const didTextChange =
-      !lockTextFields && (
-        nextDescTrim !== initialDescRef.current ||
-        JSON.stringify(nextMembersNorm) !== JSON.stringify(initialMembersRef.current)
-      );
+      !lockTextFields &&
+      (nextDescTrim !== initialDescRef.current ||
+        JSON.stringify(nextMembersNorm) !== JSON.stringify(initialMembersRef.current));
 
-    // jeśli pending i ktoś nic nie wybrał do uploadu -> nie rób nic
     if (lockTextFields && !didUploadLogo && !didUploadBanner) {
       setMsg("❌ Drużyna jest w trakcie rozpatrywania – możesz zmienić tylko logo i banner");
       return;
@@ -148,8 +156,7 @@ export default function EditTeam() {
     try {
       setSaving(true);
 
-      // ✅ 1) NAJPIERW teksty (bo PATCH ustawia pending)
-      // Dzięki temu nie trafisz w 403 po uploadzie.
+      // 1) teksty
       if (didTextChange) {
         const membersRes = validateMembers();
         if (!membersRes.ok) throw new Error(membersRes.message);
@@ -163,11 +170,10 @@ export default function EditTeam() {
         });
       }
 
-      // ✅ 2) POTEM uploady (upload też ustawia pending, ale to już nie szkodzi)
+      // 2) uploady
       if (didUploadLogo) await uploadImage("logo", logoFile);
       if (didUploadBanner) await uploadImage("banner", bannerFile);
 
-      // ✅ 3) redirect zawsze
       const didAnyUpload = didUploadLogo || didUploadBanner;
       const didAnyChange = didTextChange || didAnyUpload;
 
@@ -176,19 +182,26 @@ export default function EditTeam() {
         return;
       }
 
-      hardGoTeamMe("✅ Zapisano zmiany. Drużyna została wysłana do weryfikacji (status: ROZPATRYWANIE).");
+      hardGoTeamMe(
+        "✅ Zapisano zmiany. Drużyna została wysłana do weryfikacji (status: ROZPATRYWANIE)."
+      );
     } catch (err) {
       setMsg(`❌ ${err.message}`);
       setSaving(false);
     }
   };
 
+  const bannerToShow = bannerPreview || bannerUrl;
+  const logoToShow = logoPreview || logoUrl;
+
   if (loading) {
     return (
-      <section className={styles.page}>
+      <section className={styles.section}>
+        <div className={styles.bgGlow} aria-hidden="true" />
         <div className={styles.container}>
-          <button className={styles.back} onClick={() => navigate("/team/me")}>
-            ← Wróć
+          <button className={styles.backModern} onClick={() => navigate("/team/me")} type="button">
+            <span className={styles.backIcon}>←</span>
+            <span>Wróć</span>
           </button>
           <div className={styles.msg}>Ładowanie...</div>
         </div>
@@ -198,10 +211,12 @@ export default function EditTeam() {
 
   if (!team) {
     return (
-      <section className={styles.page}>
+      <section className={styles.section}>
+        <div className={styles.bgGlow} aria-hidden="true" />
         <div className={styles.container}>
-          <button className={styles.back} onClick={() => navigate("/teams")}>
-            ← Wróć
+          <button className={styles.backModern} onClick={() => navigate("/teams")} type="button">
+            <span className={styles.backIcon}>←</span>
+            <span>Wróć</span>
           </button>
           <div className={styles.msg}>Nie masz drużyny.</div>
         </div>
@@ -210,115 +225,185 @@ export default function EditTeam() {
   }
 
   return (
-    <section className={styles.page}>
+    <section className={styles.section}>
+      <div className={styles.bgGlow} aria-hidden="true" />
       <div className={styles.container}>
-        <button className={styles.back} onClick={() => navigate("/team/me")}>
-          ← Wróć
+        <button className={styles.backModern} onClick={() => navigate("/team/me")} type="button">
+          <span className={styles.backIcon}>←</span>
+          <span>Wróć</span>
         </button>
-
-        <h1 className={styles.h1}>Edytuj drużynę</h1>
-        <p className={styles.sub}>
-          {lockTextFields
-            ? "Drużyna jest w trakcie rozpatrywania. Możesz zmienić tylko logo/banner."
-            : "Możesz edytować dane i grafiki. Po zapisie drużyna wraca do moderacji."}
-        </p>
 
         {msg && <div className={styles.msg}>{msg}</div>}
 
-        <form className={styles.form} onSubmit={onSave}>
-          <div className={styles.grid}>
-            <div className={styles.field}>
-              <span>Nazwa</span>
-              <input value={team.name} disabled />
-            </div>
-
-            <label className={styles.field}>
-              <span>Logo</span>
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                disabled={saving}
-              />
-              {(logoPreview || logoUrl) && (
-                <img className={styles.preview} src={logoPreview || logoUrl} alt="logo" />
+        <div className={styles.detailsCard}>
+          {/* HEADER jak TeamDetails/MyTeam */}
+          <div className={styles.top}>
+            <div className={styles.media}>
+              {bannerToShow ? (
+                <img className={styles.banner} src={bannerToShow} alt="Banner drużyny" />
+              ) : (
+                <div className={styles.bannerFallback} />
               )}
-            </label>
 
-            <label className={styles.field}>
-              <span>Banner</span>
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
-                disabled={saving}
-              />
-              {(bannerPreview || bannerUrl) && (
-                <img className={styles.previewBanner} src={bannerPreview || bannerUrl} alt="banner" />
-              )}
-            </label>
+              <div className={styles.mediaOverlay} />
 
-            <label className={`${styles.field} ${styles.full}`}>
-              <span>Opis</span>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={6}
-                maxLength={2000}
-                disabled={saving || lockTextFields}
-              />
-              {lockTextFields && (
-                <small className={styles.hint}>
-                  Edycja opisu zablokowana w trakcie rozpatrywania.
-                </small>
-              )}
-            </label>
-          </div>
-
-          <div className={styles.section}>
-            <h2>Skład</h2>
-
-            <div className={styles.members}>
-              {members.map((m, idx) => (
-                <div className={styles.memberRow} key={idx}>
-                  <input
-                    className={styles.memberInput}
-                    placeholder="Imię i nazwisko"
-                    value={m.fullName}
-                    onChange={(e) => updateMember(idx, e.target.value)}
-                    maxLength={60}
-                    disabled={saving || lockTextFields}
-                  />
-                  {members.length > 1 && (
-                    <button
-                      type="button"
-                      className={styles.memberRemove}
-                      onClick={() => removeMember(idx)}
-                      disabled={saving || lockTextFields}
-                    >
-                      Usuń
-                    </button>
+              <div className={styles.coverBar}>
+                <div className={styles.logoWrap}>
+                  {logoToShow ? (
+                    <img className={styles.logo} src={logoToShow} alt="Logo drużyny" />
+                  ) : (
+                    <div className={styles.logoFallback}>
+                      {String(team.name || "?").slice(0, 1).toUpperCase()}
+                    </div>
                   )}
                 </div>
-              ))}
+
+                <div className={styles.headerText}>
+                  <h1 className={styles.teamName}>Edytuj: {team.name}</h1>
+
+                  <div className={styles.pills}>
+                    <span className={`${styles.pillSoft} ${styles.pillOk}`}>
+                      <span className={styles.dot} />
+                      {lockTextFields ? "ROZPATRYWANIE" : "EDYCJA"}
+                    </span>
+
+                    <span className={styles.pillSoft}>{membersCount} zawodników</span>
+                  </div>
+                </div>
+
+                {/* puste actions (layout jak reszta) */}
+                <div className={styles.headerActions} aria-hidden="true" />
+              </div>
+            </div>
+          </div>
+
+          {/* INFO */}
+          <div className={styles.block}>
+            <div className={styles.blockHead}>
+              <div className={styles.blockTitle}>
+                <h2>Ustawienia</h2>
+                <span className={styles.blockSub}>
+                  {lockTextFields
+                    ? "Drużyna w rozpatrywaniu — możesz zmienić tylko logo/banner."
+                    : "Możesz edytować dane i grafiki. Po zapisie drużyna wraca do moderacji."}
+                </span>
+              </div>
+              <span className={styles.blockBadge}>EDYCJA</span>
             </div>
 
-            <button
-              type="button"
-              className={styles.addMember}
-              onClick={addMember}
-              disabled={saving || lockTextFields || members.length >= 10}
-            >
-              + Dodaj zawodnika
-            </button>
+            <form onSubmit={onSave} className={styles.form}>
+              {/* PODSTAWOWE */}
+              <div className={styles.grid}>
+                <div className={styles.field}>
+                  <span>Nazwa</span>
+                  <input value={team.name} disabled />
+                </div>
+
+                <label className={styles.field}>
+                  <span>Logo</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                    disabled={saving}
+                  />
+                  {logoToShow && (
+                    <img className={styles.preview} src={logoToShow} alt="logo" />
+                  )}
+                </label>
+
+                <label className={styles.field}>
+                  <span>Banner</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
+                    disabled={saving}
+                  />
+                  {bannerToShow && (
+                    <img className={styles.previewBanner} src={bannerToShow} alt="banner" />
+                  )}
+                </label>
+
+                <label className={`${styles.field} ${styles.full}`}>
+                  <span>Opis</span>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={6}
+                    maxLength={2000}
+                    disabled={saving || lockTextFields}
+                  />
+                  {lockTextFields && (
+                    <small className={styles.hint}>
+                      Edycja opisu zablokowana w trakcie rozpatrywania.
+                    </small>
+                  )}
+                </label>
+              </div>
+
+              {/* SKŁAD */}
+              <div className={styles.blockInner}>
+                <div className={styles.blockHead}>
+                  <div className={styles.blockTitle}>
+                    <h2>Skład</h2>
+                    <span className={styles.blockSub}>Lista zawodników w drużynie</span>
+                  </div>
+                  <span className={styles.blockBadge}>{membersCount}</span>
+                </div>
+
+                <div className={styles.members}>
+                  {members.map((m, idx) => (
+                    <div className={styles.memberRow} key={idx}>
+                      <input
+                        className={styles.memberInput}
+                        placeholder="Imię i nazwisko"
+                        value={m.fullName}
+                        onChange={(e) => updateMember(idx, e.target.value)}
+                        maxLength={60}
+                        disabled={saving || lockTextFields}
+                      />
+
+                      {members.length > 1 && (
+                        <button
+                          type="button"
+                          className={styles.memberRemove}
+                          onClick={() => removeMember(idx)}
+                          disabled={saving || lockTextFields}
+                        >
+                          Usuń
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className={styles.addMember}
+                  onClick={addMember}
+                  disabled={saving || lockTextFields || members.length >= 10}
+                >
+                  + Dodaj zawodnika
+                </button>
+              </div>
+
+              <div className={styles.actions}>
+                <button className={styles.btnPrimary} disabled={saving} type="submit">
+                  {saving ? "Zapisywanie..." : "Zapisz"}
+                </button>
+              </div>
+            </form>
           </div>
 
-          <div className={styles.actions}>
-            <button className={styles.btnPrimary} disabled={saving}>
-              {saving ? "Zapisywanie..." : "Zapisz"}
-            </button>
-          </div>
-        </form>
+          {/* pending info */}
+          {isPending && (
+            <div className={styles.pendingInfo}>
+              ⏳ Drużyna jest w trakcie rozpatrywania. W tym czasie możesz zmienić tylko
+              logo i banner.
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

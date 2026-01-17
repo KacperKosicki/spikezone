@@ -16,7 +16,7 @@ router.get("/check-name", async (req, res) => {
 
     if (!name) return res.status(400).json({ message: "Podaj nazwę" });
     if (name.length < 2) return res.status(400).json({ message: "Nazwa min. 2 znaki" });
-    if (name.length > 40) return res.status(400).json({ message: "Nazwa max 40 znaków" });
+    if (name.length > 60) return res.status(400).json({ message: "Nazwa max 60 znaków" });
 
     const nameLower = name.toLowerCase();
 
