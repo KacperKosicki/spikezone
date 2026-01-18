@@ -1,6 +1,7 @@
 .section {
-  --primary: #6c5cff;
-  --primary-rgb: 108, 92, 255;
+  /* ✅ KOLOR PRZEWODNI STATS (zmieniasz tylko to) */
+  --primary: #22c55e;
+  --primary-rgb: 34, 197, 94;
 
   padding: 0rem 2rem 5.2rem;
   background: #f6f7fb;
@@ -205,7 +206,14 @@
   height: 100%;
   width: 62%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--primary), #8f86ff);
+
+  /* ✅ bez fioletu na końcu – gradient w kolorze przewodnim */
+  background: linear-gradient(
+    90deg,
+    rgba(var(--primary-rgb), 0.85),
+    rgba(var(--primary-rgb), 0.45)
+  );
+
   box-shadow: 0 0 16px rgba(var(--primary-rgb), 0.22);
   opacity: 0.95;
 }
