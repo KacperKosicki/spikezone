@@ -13,6 +13,7 @@ import Teams from "./pages/Teams/Teams";
 import TeamDetails from "./pages/Teams/TeamDetails";
 import CreateTeam from "./pages/Teams/CreateTeam";
 import MyTeam from "./pages/Teams/MyTeam";
+import About from "./pages/About/About";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import AdminRoute from "./routes/AdminRoute";
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/backend-offline" element={<BackendOffline />} />
         <Route path="/team/edit" element={<EditTeam />} />
+        <Route path="/o-nas" element={<About />} />
 
         {/* TOURNAMENTS */}
         <Route path="/tournaments" element={<Tournaments />} />

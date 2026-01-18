@@ -10,7 +10,7 @@ const links = [
   { label: "STRONA GŁÓWNA", href: "/" },
   { label: "TURNIEJE", href: "/tournaments" },
   { label: "DRUŻYNY", href: "/teams" },
-  { label: "O NAS", href: "#onas" },
+  { label: "O NAS", href: "/o-nas" },
   { label: "KONTAKT", href: "#kontakt" },
 ];
 
@@ -113,9 +113,9 @@ const Navbar = () => {
   const label = authLoading
     ? "..."
     : mongoUser?.displayName ||
-      firebaseUser?.displayName ||
-      firebaseUser?.email ||
-      "ZALOGUJ SIĘ";
+    firebaseUser?.displayName ||
+    firebaseUser?.email ||
+    "ZALOGUJ SIĘ";
 
   return (
     <>
@@ -147,22 +147,22 @@ const Navbar = () => {
                 </button>
 
                 {/* ✅ DRUŻYNA */}
-<button className={styles.userMenuItem} onClick={() => goTo(teamHref)}>
-  {teamView.mode === "none" ? (
-    <span className={styles.teamChipCol}>
-      <span className={styles.teamLine2 + " " + teamView.statusClass}>
-        {teamView.text}
-      </span>
-    </span>
-  ) : (
-    <span className={styles.teamChipCol}>
-      <span className={styles.teamLine1}>Twoja drużyna</span>
-      <span className={`${styles.teamLine2} ${teamView.statusClass}`}>
-        {teamView.text}
-      </span>
-    </span>
-  )}
-</button>
+                <button className={styles.userMenuItem} onClick={() => goTo(teamHref)}>
+                  {teamView.mode === "none" ? (
+                    <span className={styles.teamChipCol}>
+                      <span className={styles.teamLine2 + " " + teamView.statusClass}>
+                        {teamView.text}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className={styles.teamChipCol}>
+                      <span className={styles.teamLine1}>Twoja drużyna</span>
+                      <span className={`${styles.teamLine2} ${teamView.statusClass}`}>
+                        {teamView.text}
+                      </span>
+                    </span>
+                  )}
+                </button>
 
 
                 {isAdmin && (
@@ -221,19 +221,18 @@ const Navbar = () => {
               </button>
 
               {/* ✅ DRUŻYNA (mobile) */}
-<button className={styles.drawerActionPrimary} onClick={() => goTo(teamHref)}>
-  {teamView.mode === "none" ? (
-    <span className={`${styles.teamChipRow} ${teamView.statusClass}`}>
-      {teamView.text}
-    </span>
-  ) : (
-    <span className={styles.teamChipRow}>
-      <span className={styles.teamPrefix}>Twoja drużyna:</span>{" "}
-      <span className={teamView.statusClass}>{teamView.text}</span>
-    </span>
-  )}
-</button>
-
+              <button className={styles.drawerActionPrimary} onClick={() => goTo(teamHref)}>
+                {teamView.mode === "none" ? (
+                  <span className={`${styles.teamChipRow} ${teamView.statusClass}`}>
+                    {teamView.text}
+                  </span>
+                ) : (
+                  <span className={styles.teamChipRow}>
+                    <span className={styles.teamPrefix}>Twoja drużyna:</span>{" "}
+                    <span className={teamView.statusClass}>{teamView.text}</span>
+                  </span>
+                )}
+              </button>
 
               {isAdmin && (
                 <button className={styles.drawerActionPrimary} onClick={() => goTo("/admin")}>

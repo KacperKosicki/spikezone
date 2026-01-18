@@ -496,14 +496,14 @@ export default function TournamentDetails() {
 
               <div className={styles.statCard}>
                 <div className={styles.statLabel}>
-                  <FaRegMoneyBillAlt /> Wpisowe
+                  <FaRegMoneyBillAlt /> Wpisowe od drużyny
                 </div>
                 <div className={styles.statValue}>{t.entryFee ?? 0} zł</div>
               </div>
 
               <div className={styles.statCard}>
                 <div className={styles.statLabel}>
-                  <FaUsers /> Zgłoszone
+                  <FaUsers /> Zgłoszone drużyny
                 </div>
                 <div className={styles.statValue}>
                   {registeredCount}/{registeredLimit}
@@ -514,7 +514,7 @@ export default function TournamentDetails() {
             {/* HARMONOGRAM */}
             <div className={styles.block}>
               <div className={styles.blockHead}>
-                <h2>Harmonogram</h2>
+                <h2>Harmonogram turnieju</h2>
                 <span className={styles.blockBadge}>Terminy</span>
               </div>
 
@@ -649,7 +649,7 @@ export default function TournamentDetails() {
             {/* DESCRIPTION */}
             <div className={styles.block}>
               <div className={styles.blockHead}>
-                <h2>Opis</h2>
+                <h2>Opis turnieju</h2>
                 <span className={styles.blockBadge}>Informacje organizacyjne</span>
               </div>
 
@@ -733,7 +733,7 @@ export default function TournamentDetails() {
                   })}
                 </ul>
               ) : (
-                <div className={styles.msgInline}>Na razie brak zgłoszeń.</div>
+                <div className={styles.msgInline}>Brak zgłoszonych drużyn.</div>
               )}
             </div>
           </div>

@@ -38,4 +38,6 @@ app.use("/api/team/upload", require("./routes/team.upload.routes"));
 
 app.use("/api/tournaments", require("./routes/tournaments.register.routes"));
 
+app.use("/api/public", require("./routes/public"));
+
 module.exports = app;
