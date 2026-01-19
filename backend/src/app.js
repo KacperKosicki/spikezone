@@ -3,29 +3,35 @@ const cors = require("cors");
 
 const app = express();
 
+// ✅ Dozwolone originy (prod + local)
 const allowedOrigins = [
-  process.env.FRONTEND_URL,      // np. https://spikezone.vercel.app
+  process.env.FRONTEND_URL, // np. https://spikezone.vercel.app
   "http://localhost:3000",
 ].filter(Boolean);
 
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      // requesty bez Origin (np. Render health check) przepuszczamy
-      if (!origin) return cb(null, true);
+// ✅ Jedna konfiguracja CORS używana WSZĘDZIE (również dla preflight)
+const corsOptions = {
+  origin: (origin, cb) => {
+    // requesty bez Origin (np. healthcheck, curl, server-to-server) przepuszczamy
+    if (!origin) return cb(null, true);
 
-      if (allowedOrigins.includes(origin)) return cb(null, true);
+    // ✅ Debug (możesz na chwilę zostawić)
+    // console.log("CORS origin:", origin);
 
-      return cb(new Error("Not allowed by CORS: " + origin));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
 
-// preflight dla wszystkich tras
-app.options("*", cors());
+    return cb(new Error("Not allowed by CORS: " + origin));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+// ✅ CORS przed routes
+app.use(cors(corsOptions));
+
+// ✅ Preflight dla wszystkich tras z TĄ SAMĄ konfiguracją
+app.options("*", cors(corsOptions));
 
 app.use(express.json());
 
@@ -44,17 +50,15 @@ app.use("/api/admin/teams", require("./routes/admin.teams.routes"));
 // PUBLIC: tournaments
 app.use("/api/tournaments", require("./routes/tournaments.public.routes"));
 
-// PUBLIC: teams (lista + szczegóły po slugu)
+// PUBLIC: teams
 app.use("/api/teams", require("./routes/teams.routes"));
 
 // USER TEAM
 app.use("/api/team", require("./routes/team.me.routes"));     // GET/PATCH /api/team/me
 app.use("/api/team", require("./routes/team.create.routes")); // POST /api/team
-
 app.use("/api/team/upload", require("./routes/team.upload.routes"));
 
 app.use("/api/tournaments", require("./routes/tournaments.register.routes"));
-
 app.use("/api/public", require("./routes/public"));
 
 module.exports = app;
