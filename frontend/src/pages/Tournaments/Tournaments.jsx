@@ -12,7 +12,7 @@ import {
   FaClock,
 } from "react-icons/fa";
 
-const API = "http://localhost:5000";
+import { apiFetch } from "../../api/api"; // <- dopasuj ścieżkę jeśli masz inaczej
 
 export default function Tournaments() {
   const [items, setItems] = useState([]);
@@ -23,9 +23,7 @@ export default function Tournaments() {
     (async () => {
       try {
         setMsg("Ładowanie...");
-        const res = await fetch(`${API}/api/tournaments`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.message || "Nie udało się pobrać turniejów");
+        const data = await apiFetch("/api/tournaments"); // ✅ już nie localhost
         setItems(Array.isArray(data) ? data : []);
         setMsg("");
       } catch (e) {
@@ -54,7 +52,6 @@ export default function Tournaments() {
     }
   };
 
-  // 📅 DATA TURNIEJU na bannerze
   const eventRange = (t) => {
     const s = t?.eventStartAt ? new Date(t.eventStartAt) : null;
     const e = t?.eventEndAt ? new Date(t.eventEndAt) : null;
@@ -81,7 +78,6 @@ export default function Tournaments() {
     return `${left} – ${right}`;
   };
 
-  // 🟢 STATUS ZAPISÓW (regStartAt / regEndAt)
   const regStatusFor = (t) => {
     const now = new Date();
 
@@ -91,26 +87,20 @@ export default function Tournaments() {
     const rsOk = rs && !Number.isNaN(rs.getTime());
     const reOk = re && !Number.isNaN(re.getTime());
 
-    // zamknięte
     if (reOk && now > re) return { text: "Zapisy zakończone", tone: "done" };
-
-    // brak startu, ale jest koniec i jeszcze nie minął -> traktuj jako trwające
     if (!rsOk && reOk && now <= re) return { text: "Zapisy trwają", tone: "live" };
 
-    // jeszcze nie
     if (rsOk && now < rs) {
       const diffDays = Math.ceil((rs - now) / (1000 * 60 * 60 * 24));
       if (diffDays <= 7) return { text: "Zapisy już wkrótce", tone: "soon" };
       return { text: "Zapisy nieaktywne", tone: "upcoming" };
     }
 
-    // trwają (start już był i koniec nie minął / brak końca)
     if (rsOk && (!reOk || now <= re)) return { text: "Zapisy trwają", tone: "live" };
 
     return { text: "Brak okna zapisów", tone: "neutral" };
   };
 
-  // 🏆 STATUS TURNIEJU (eventStartAt / eventEndAt)
   const tournamentStatusFor = (t) => {
     const now = new Date();
     const s = t?.eventStartAt ? new Date(t.eventStartAt) : null;
@@ -161,7 +151,6 @@ export default function Tournaments() {
                 type="button"
                 aria-label={`Otwórz turniej ${t.title}`}
               >
-                {/* MEDIA */}
                 <div className={styles.media}>
                   {t.bannerUrl ? (
                     <img
@@ -183,7 +172,6 @@ export default function Tournaments() {
                     </div>
                   </div>
 
-                  {/* corner pills: DATA + ZAPISY */}
                   <div className={styles.cornerPills}>
                     <span className={styles.pillSoft}>
                       <FaCalendarAlt /> {eventText}
@@ -195,7 +183,6 @@ export default function Tournaments() {
                   </div>
                 </div>
 
-                {/* TOP: ikonka + STATUS TURNIEJU */}
                 <div className={styles.top}>
                   <div className={styles.icon}>
                     <FaTrophy />
@@ -223,7 +210,6 @@ export default function Tournaments() {
                   {!!t.venue && <span className={styles.venue}>{t.venue}</span>}
                 </div>
 
-                {/* mini-stats */}
                 <div className={styles.statsRow}>
                   <span className={styles.statPill}>
                     <FaUsers /> Limit drużyn: {t.teamLimit ?? 16}

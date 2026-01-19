@@ -16,7 +16,6 @@ import {
 import { apiFetch } from "../../api/api";
 import { auth } from "../../firebase";
 
-const API = "http://localhost:5000";
 const INTENT_KEY = "tournamentIntent";
 const FLASH_KEY = "teamFlash";
 
@@ -95,36 +94,34 @@ export default function TournamentDetails() {
   }, []);
 
 
-  async function fetchRegistrations(currentSlug) {
-    try {
-      const res = await fetch(`${API}/api/tournaments/${currentSlug}/registrations`);
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) setRegs(data);
-    } catch {
-      // nie blokujemy widoku
-    }
+async function fetchRegistrations(currentSlug) {
+  try {
+    const data = await apiFetch(`/api/tournaments/${currentSlug}/registrations`);
+    if (data) setRegs(data);
+  } catch {
+    // nie blokujemy widoku
   }
+}
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setErr("");
-        setLoading(true);
+useEffect(() => {
+  (async () => {
+    try {
+      setErr("");
+      setLoading(true);
 
-        const res = await fetch(`${API}/api/tournaments/${slug}`);
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data?.message || "Nie znaleziono turnieju");
-        setT(data);
+      const data = await apiFetch(`/api/tournaments/${slug}`);
+      setT(data);
 
-        await fetchRegistrations(slug);
-      } catch (e) {
-        setErr(e.message);
-        setT(null);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [slug]);
+      await fetchRegistrations(slug);
+    } catch (e) {
+      setErr(e.message);
+      setT(null);
+    } finally {
+      setLoading(false);
+    }
+  })();
+}, [slug]);
+
 
   const prettyDateTime = (d) => {
     try {
