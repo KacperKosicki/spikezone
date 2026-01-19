@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "./BackendOffline.module.scss";
 
-const API = "http://localhost:5000";
+// ✅ bierze z .env / Vercel Env Vars, fallback na localhost
+const API = (process.env.REACT_APP_API_URL || "http://localhost:5000").trim();
 
 const BackendOffline = () => {
   const navigate = useNavigate();
@@ -12,7 +13,6 @@ const BackendOffline = () => {
     try {
       const res = await fetch(`${API}/api/health`, { cache: "no-store" });
       if (res.ok) {
-        // backend działa -> nie pokazujemy offline
         navigate("/", { replace: true });
         return;
       }
@@ -25,7 +25,6 @@ const BackendOffline = () => {
 
   useEffect(() => {
     check();
-    // opcjonalnie co 5s próbuj ponownie
     const t = setInterval(check, 5000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps

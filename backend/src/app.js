@@ -3,12 +3,29 @@ const cors = require("cors");
 
 const app = express();
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL,      // np. https://spikezone.vercel.app
+  "http://localhost:3000",
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: ["http://localhost:3000"],
+    origin: (origin, cb) => {
+      // requesty bez Origin (np. Render health check) przepuszczamy
+      if (!origin) return cb(null, true);
+
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+
+      return cb(new Error("Not allowed by CORS: " + origin));
+    },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// preflight dla wszystkich tras
+app.options("*", cors());
 
 app.use(express.json());
 

@@ -12,7 +12,7 @@ import { auth } from "../firebase";
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
-const API = "http://localhost:5000";
+const API = (process.env.REACT_APP_API_URL || "http://localhost:5000").trim();
 
 export const AuthProvider = ({ children }) => {
   const [firebaseUser, setFirebaseUser] = useState(null);
