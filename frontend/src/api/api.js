@@ -1,62 +1,55 @@
-const express = require("express");
-const cors = require("cors");
+// frontend/src/api/api.js
+import { auth } from "../firebase";
 
-const app = express();
+// ✅ CRA: bierze z .env (local) lub Vercel Env Vars (prod)
+const API = (process.env.REACT_APP_API_URL || "http://localhost:5000").trim();
 
-// ✅ dozwolone originy (prod + local)
-const allowedOrigins = [
-  process.env.FRONTEND_URL, // np. https://spikezone.vercel.app
-  "http://localhost:3000",
-].filter(Boolean);
+export async function getAuthHeader() {
+  const user = auth.currentUser;
+  const token = user ? await user.getIdToken() : null;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
-// ✅ jedna konfiguracja CORS
-const corsOptions = {
-  origin: (origin, cb) => {
-    // requesty bez Origin (np. health check / curl / Render) przepuszczamy
-    if (!origin) return cb(null, true);
+function makeApiError(res, data, fallbackMsg) {
+  const err = new Error(data?.message || fallbackMsg);
+  err.code = data?.code;
+  if (!err.code && res.status === 401) err.code = "UNAUTHORIZED";
+  err.status = res.status;
+  err.data = data;
+  return err;
+}
 
-    if (allowedOrigins.includes(origin)) return cb(null, true);
+export async function apiFetch(path, { method = "GET", body, headers } = {}) {
+  const authHeader = await getAuthHeader();
 
-    return cb(new Error("Not allowed by CORS: " + origin));
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-};
+  const res = await fetch(`${API}${path}`, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeader,
+      ...(headers || {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
 
-app.use(cors(corsOptions));
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw makeApiError(res, data, "Request failed");
+  return data;
+}
 
-// ✅ preflight (NIE "*")
-app.options("/*", cors(corsOptions));
-// alternatywnie (też działa): app.options(/.*/, cors(corsOptions));
+export async function apiUpload(path, formData, { method = "POST", headers } = {}) {
+  const authHeader = await getAuthHeader();
 
-app.use(express.json());
+  const res = await fetch(`${API}${path}`, {
+    method,
+    headers: {
+      ...authHeader,
+      ...(headers || {}),
+    },
+    body: formData,
+  });
 
-app.get("/api/health", (req, res) => {
-  res.json({ ok: true, message: "SPIKEZONE API działa" });
-});
-
-// AUTH
-app.use("/api/auth", require("./routes/auth.routes"));
-
-// ADMIN
-app.use("/api/admin/tournaments", require("./routes/admin.tournaments.routes"));
-app.use("/api/admin/users", require("./routes/admin.users.routes"));
-app.use("/api/admin/teams", require("./routes/admin.teams.routes"));
-
-// PUBLIC: tournaments
-app.use("/api/tournaments", require("./routes/tournaments.public.routes"));
-
-// PUBLIC: teams
-app.use("/api/teams", require("./routes/teams.routes"));
-
-// USER TEAM
-app.use("/api/team", require("./routes/team.me.routes"));
-app.use("/api/team", require("./routes/team.create.routes"));
-app.use("/api/team/upload", require("./routes/team.upload.routes"));
-
-app.use("/api/tournaments", require("./routes/tournaments.register.routes"));
-
-app.use("/api/public", require("./routes/public"));
-
-module.exports = app;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw makeApiError(res, data, "Upload failed");
+  return data;
+}
