@@ -1,6 +1,8 @@
 import { auth } from "../firebase";
 
-const API = "http://localhost:5000";
+// ✅ CRA: bierze z .env (local) lub z Vercel Env Vars (prod)
+// jeśli nie ustawione, fallback na localhost
+const API = (process.env.REACT_APP_API_URL || "http://localhost:5000").trim();
 
 export async function getAuthHeader() {
   const user = auth.currentUser;

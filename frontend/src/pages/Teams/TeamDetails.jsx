@@ -83,7 +83,7 @@ export default function TeamDetails() {
                     <div className={styles.pills}>
                       <span className={`${styles.pillSoft} ${styles.pillOk}`}>
                         <span className={styles.dot} />
-                        ZAAKCEPTOWANA
+                        Zaakceptowana
                       </span>
 
                       <span className={styles.pillSoft}>

@@ -264,7 +264,7 @@ export default function EditTeam() {
                   <div className={styles.pills}>
                     <span className={`${styles.pillSoft} ${styles.pillOk}`}>
                       <span className={styles.dot} />
-                      {lockTextFields ? "ROZPATRYWANIE" : "EDYCJA"}
+                      {lockTextFields ? "Rozpatrywanie" : "Edycja"}
                     </span>
 
                     <span className={styles.pillSoft}>{membersCount} zawodników</span>

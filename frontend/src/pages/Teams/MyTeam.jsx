@@ -45,10 +45,10 @@ export default function MyTeam() {
   const statusText = useMemo(() => {
     if (!team) return "";
     return team.status === "pending"
-      ? "ROZPATRYWANIE"
+      ? "Rozpatrywanie"
       : team.status === "rejected"
-      ? "ODRZUCONA"
-      : "ZAAKCEPTOWANA";
+      ? "Odrzucona"
+      : "Zaakceptowana";
   }, [team]);
 
   const isPending = team?.status === "pending";
@@ -252,7 +252,7 @@ export default function MyTeam() {
           {isPending && (
             <div className={styles.pendingInfo}>
               ⏳ Twoja drużyna jest w trakcie rozpatrywania. W tym czasie nie możesz
-              zmieniać żadnych danych (w tym logo i bannera). Edycja będzie dostępna
+              zmieniać żadnych danych. Edycja będzie dostępna
               po decyzji administratora.
             </div>
           )}
