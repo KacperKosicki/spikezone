@@ -126,7 +126,7 @@ export default function HomeTeamsPreview({ limit = 6 }) {
 
                 <div className={styles.footer}>
                   <span className={styles.open}>
-                    Szczegóły <FaArrowRight />
+                    Zobacz szczegóły <FaArrowRight />
                   </span>
                 </div>
               </button>

@@ -106,7 +106,7 @@ export default function HomeTournamentsPreview({ limit = 3 }) {
 
               <div className={styles.footer}>
                 <span className={styles.open}>
-                  Szczegóły <FaArrowRight />
+                  Zobacz szczegóły <FaArrowRight />
                 </span>
 
                 <span className={styles.hint}>

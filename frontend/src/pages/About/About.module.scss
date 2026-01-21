@@ -307,9 +307,6 @@
   display: grid;
   place-items: center;
 
-  background: rgba(var(--primary-rgb), 0.14);
-  border: 1px solid rgba(var(--primary-rgb), 0.20);
-
   svg {
     color: rgb(var(--primary-rgb));
     font-size: 1.2rem;

@@ -299,7 +299,7 @@
   color: #f59e0b;
 }
 .reg_done svg {
-  color: #94a3b8;
+  color: #ef4444;
 }
 .reg_upcoming svg {
   color: rgb(var(--primary-rgb));
@@ -386,8 +386,8 @@
 }
 
 .status_done .dot {
-  background: #94a3b8;
-  box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.18);
+  background: #ef4444; /* czerwony */
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.18);
 }
 
 .status_neutral .dot {
